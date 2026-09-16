@@ -39,5 +39,5 @@ class Level01(BaseLevel):
 
     def draw_background(self, surface: pygame.Surface, area: pygame.Rect) -> None:
         font = get_font(28)
-        hint = font.render("✎ Zeichne eine Rampe mit der Maus!", True, (170, 160, 150))
+        hint = font.render("Zeichne eine Rampe mit der Maus!", True, (170, 160, 150))
         surface.blit(hint, hint.get_rect(center=(WINDOW_WIDTH // 2, area.bottom - 40)))

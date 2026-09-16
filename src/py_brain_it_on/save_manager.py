@@ -64,5 +64,13 @@ def save_level_result(data: dict, level: int, stars: int) -> dict:
     return data
 
 
+def reset() -> dict:
+    """Setzt den gesamten Spielfortschritt zurück und speichert den Ausgangszustand."""
+    fresh = _deep_copy(_DEFAULT_SAVE)
+    save(fresh)
+    return fresh
+
+
 def _deep_copy(d: dict) -> dict:
     return json.loads(json.dumps(d))
+

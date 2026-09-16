@@ -82,10 +82,35 @@ def test_dynamic_stroke_physics():
 
     anchored_stroke = world.add_drawn_stroke([(0, 1000), (200, 950)])
     assert anchored_stroke.is_static
+    assert len(anchored_stroke.connection_points) > 0
+
+
+def test_reset_and_connections():
+    from py_brain_it_on import save_manager
+    # Test reset
+    fresh = save_manager.reset()
+    assert fresh["levels"]["1"]["stars"] == 0
+    assert not fresh["levels"]["2"]["solved"]
+
+    # Test connection points on arbitrary static platforms
+    world = PhysicsWorld()
+    # Add floating platform
+    world.add_static_segment((500, 500), (800, 500))
+
+    # Stroke touching platform at (600, 505)
+    stroke = world.add_drawn_stroke([(600, 505), (600, 700)])
+    assert stroke.is_static, "Stroke touching platform should be static"
+    assert len(stroke.connection_points) > 0, "Stroke touching platform should have connection points"
+
+    # Air stroke
+    air_stroke = world.add_drawn_stroke([(100, 100), (200, 100)])
+    assert not air_stroke.is_static, "Free-floating stroke should be dynamic"
+    assert len(air_stroke.connection_points) == 0
 
 
 if __name__ == "__main__":
     test_levels()
     test_scenes()
     test_dynamic_stroke_physics()
+    test_reset_and_connections()
     print("All tests passed!")

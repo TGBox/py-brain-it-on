@@ -417,14 +417,10 @@ class HintButton:
         if self._hovered:
             pygame.draw.circle(surface, COLOR_YELLOW_DARK, (px, py), r, 3)
 
-        # Glühbirnen-Symbol (vereinfacht als Text)
-        font = get_font(int(r * 0.9))
-        icon = "💡" if self.hints_left > 0 else "○"
-        try:
-            icon_surf = font.render("💡", True, COLOR_TEXT)
-        except Exception:
-            icon_surf = font.render("?", True, COLOR_TEXT)
-        surface.blit(icon_surf, icon_surf.get_rect(center=(px, py - 2)))
+        # Text-Icon
+        font = get_font(FONT_SIZE_XS, bold=True)
+        icon_surf = font.render("TIPP", True, COLOR_TEXT)
+        surface.blit(icon_surf, icon_surf.get_rect(center=(px, py)))
 
         # Zähler-Badge
         if self.hints_left > 0:
@@ -476,9 +472,9 @@ class HintOverlay:
         card_rect = pygame.Rect((w - card_w) // 2, (h - card_h) // 2, card_w, card_h)
         draw_rounded_rect(surface, COLOR_WHITE, card_rect, radius=24, shadow_offset=6)
 
-        # Glühbirnen-Icon
+        # Titel ohne Emojis
         font_lg = get_font(FONT_SIZE_MD + 6, bold=True)
-        title_surf = font_lg.render("💡 Hinweis", True, COLOR_YELLOW_DARK)
+        title_surf = font_lg.render("Hinweis", True, COLOR_YELLOW_DARK)
         surface.blit(title_surf, title_surf.get_rect(center=(w // 2, card_rect.y + 55)))
 
         # Hinweistext (umgebrochen)

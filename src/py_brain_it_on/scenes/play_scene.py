@@ -82,19 +82,19 @@ class PlayScene(BaseScene):
         # Buttons (Toolbar)
         btn_y = WINDOW_HEIGHT - self.TOOLBAR_H + 18
         self._btn_start  = RoundedButton(
-            "▶ Starten", pygame.Rect(WINDOW_WIDTH // 2 - 250, btn_y, 220, 54),
+            "Starten", pygame.Rect(WINDOW_WIDTH // 2 - 250, btn_y, 220, 54),
             color=COLOR_GREEN, font_size=FONT_SIZE_SM, on_click=self._on_start,
         )
         self._btn_reset  = RoundedButton(
-            "↺ Neu zeichnen", pygame.Rect(WINDOW_WIDTH // 2 + 10, btn_y, 240, 54),
+            "Neu zeichnen", pygame.Rect(WINDOW_WIDTH // 2 + 10, btn_y, 240, 54),
             color=COLOR_CORAL, font_size=FONT_SIZE_SM, on_click=self._on_reset,
         )
         self._btn_hint   = RoundedButton(
-            "💡 Tipp", pygame.Rect(WINDOW_WIDTH - 210, btn_y, 180, 54),
+            "Tipp", pygame.Rect(WINDOW_WIDTH - 210, btn_y, 180, 54),
             color=COLOR_YELLOW, font_size=FONT_SIZE_SM, on_click=self._on_hint,
         )
         self._btn_back   = RoundedButton(
-            "← Zurück", pygame.Rect(30, btn_y, 160, 54),
+            "Zurück", pygame.Rect(30, btn_y, 160, 54),
             color=(140, 130, 125), font_size=FONT_SIZE_SM, on_click=self._on_back,
         )
         self._btn_next: RoundedButton | None = None
@@ -233,7 +233,7 @@ class PlayScene(BaseScene):
             self._btn_reset.draw(surface)
             # "Physik läuft..." Anzeige
             font_sim = get_font(FONT_SIZE_SM)
-            sim_surf = font_sim.render("⚙ Physik läuft...", True, COLOR_TEXT_LIGHT)
+            sim_surf = font_sim.render("Physik läuft...", True, COLOR_TEXT_LIGHT)
             surface.blit(sim_surf, sim_surf.get_rect(
                 center=(WINDOW_WIDTH // 2 - 120, WINDOW_HEIGHT - self.TOOLBAR_H // 2)
             ))
@@ -305,7 +305,7 @@ class PlayScene(BaseScene):
         draw_rounded_rect(surface, COLOR_WHITE, card_rect, radius=24, shadow_offset=8)
 
         font_title = get_font(FONT_SIZE_MD, bold=True)
-        t_surf = font_title.render("💡 Level-Tipp", True, COLOR_YELLOW)
+        t_surf = font_title.render("Level-Tipp", True, COLOR_YELLOW)
         surface.blit(t_surf, t_surf.get_rect(center=(cx, cy - 65)))
 
         font_hint = get_font(FONT_SIZE_SM)
@@ -427,10 +427,10 @@ class PlayScene(BaseScene):
         # Weiter-Button aufbauen
         cx, cy = WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2
         if self.level_num < TOTAL_LEVELS:
-            label = "Nächstes Level ▶"
+            label = "Nächstes Level"
             action = self._on_next_level
         else:
-            label = "Alle Level gemeistert! ★"
+            label = "Alle Level gemeistert!"
             action = self._on_back_to_menu
         self._btn_next = RoundedButton(
             label,

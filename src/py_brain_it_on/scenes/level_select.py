@@ -17,6 +17,7 @@ from ..ui.components import (
     RoundedButton, get_font, draw_rounded_rect, draw_star,
 )
 from ..ui.animations import Tween, ease_out_back
+from .. import save_manager
 
 
 # Farbpalette für die Kacheln
@@ -55,6 +56,7 @@ class LevelSelectScene(BaseScene):
         self._t = 0.0
         self.page = 0
         self.total_pages = math.ceil(TOTAL_LEVELS / self.LEVELS_PER_PAGE)
+        self._show_reset_confirm = False
 
         # Einblend-Animationen für Kacheln
         self._tile_tweens = [
@@ -64,25 +66,49 @@ class LevelSelectScene(BaseScene):
 
         # Buttons
         self._back_btn = RoundedButton(
-            "← Zurück",
-            pygame.Rect(60, 45, 180, 60),
+            "Zurück",
+            pygame.Rect(60, 45, 160, 60),
             color=(140, 130, 125),
             font_size=FONT_SIZE_SM,
             on_click=self._on_back,
         )
+        self._reset_btn = RoundedButton(
+            "Fortschritt zurücksetzen",
+            pygame.Rect(WINDOW_WIDTH - 360, 45, 300, 60),
+            color=(200, 95, 85),
+            font_size=FONT_SIZE_SM,
+            on_click=self._on_request_reset,
+        )
         self._prev_btn = RoundedButton(
-            "← Vorherige",
-            pygame.Rect(WINDOW_WIDTH // 2 - 270, 770, 200, 56),
+            "Vorherige Seite",
+            pygame.Rect(WINDOW_WIDTH // 2 - 280, 770, 220, 56),
             color=COLOR_TEAL,
             font_size=FONT_SIZE_SM,
             on_click=self._on_prev_page,
         )
         self._next_btn = RoundedButton(
-            "Nächste →",
-            pygame.Rect(WINDOW_WIDTH // 2 + 70, 770, 200, 56),
+            "Nächste Seite",
+            pygame.Rect(WINDOW_WIDTH // 2 + 60, 770, 220, 56),
             color=COLOR_TEAL,
             font_size=FONT_SIZE_SM,
             on_click=self._on_next_page,
+        )
+
+        # Dialog-Buttons für Reset-Bestätigung
+        cx, cy = WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2
+        self._btn_confirm_reset = RoundedButton(
+            "Ja, zurücksetzen",
+            pygame.Rect(cx - 240, cy + 40, 220, 54),
+            color=COLOR_CORAL,
+            font_size=FONT_SIZE_SM,
+            on_click=self._on_confirm_reset,
+        )
+        self._btn_cancel_reset = RoundedButton(
+            "Abbrechen",
+            pygame.Rect(cx + 20, cy + 40, 220, 54),
+            color=(140, 130, 125),
+            font_size=FONT_SIZE_SM,
+            on_click=self._on_cancel_reset,
         )
 
         self._tile_rects = self._calc_tile_rects()
@@ -90,6 +116,7 @@ class LevelSelectScene(BaseScene):
 
     def on_enter(self) -> None:
         self._reset_tweens()
+        self._show_reset_confirm = False
 
     def _reset_tweens(self) -> None:
         for tw in self._tile_tweens:
@@ -105,8 +132,28 @@ class LevelSelectScene(BaseScene):
             self.page += 1
             self._reset_tweens()
 
+    def _on_request_reset(self) -> None:
+        self._show_reset_confirm = True
+
+    def _on_confirm_reset(self) -> None:
+        self.game.save_data = save_manager.reset()
+        self.page = 0
+        self._reset_tweens()
+        self._show_reset_confirm = False
+
+    def _on_cancel_reset(self) -> None:
+        self._show_reset_confirm = False
+
     def handle_event(self, event: pygame.event.Event) -> None:
+        if self._show_reset_confirm:
+            self._btn_confirm_reset.handle_event(event)
+            self._btn_cancel_reset.handle_event(event)
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                self._show_reset_confirm = False
+            return
+
         self._back_btn.handle_event(event)
+        self._reset_btn.handle_event(event)
         if self.page > 0:
             self._prev_btn.handle_event(event)
         if self.page < self.total_pages - 1:
@@ -124,7 +171,13 @@ class LevelSelectScene(BaseScene):
 
     def update(self, dt: float) -> None:
         self._t += dt
+        if self._show_reset_confirm:
+            self._btn_confirm_reset.update(dt)
+            self._btn_cancel_reset.update(dt)
+            return
+
         self._back_btn.update(dt)
+        self._reset_btn.update(dt)
         if self.page > 0:
             self._prev_btn.update(dt)
         if self.page < self.total_pages - 1:
@@ -158,8 +211,9 @@ class LevelSelectScene(BaseScene):
             if level_num <= TOTAL_LEVELS:
                 self._draw_tile(surface, slot_idx, level_num, rect)
 
-        # Zurück-Button
+        # Zurück-Button & Fortschritt-Reset
         self._back_btn.draw(surface)
+        self._reset_btn.draw(surface)
 
         # Seiten-Navigation (wenn mehrere Seiten)
         if self.total_pages > 1:
@@ -193,6 +247,28 @@ class LevelSelectScene(BaseScene):
         surface.blit(text_surf, text_surf.get_rect(
             midleft=(start_x + total_w_stars + 16, star_y)
         ))
+
+        # Bestätigungs-Dialog zum Zurücksetzen
+        if self._show_reset_confirm:
+            overlay = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 160))
+            surface.blit(overlay, (0, 0))
+
+            card_w, card_h = 660, 260
+            cx, cy = WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2
+            card_rect = pygame.Rect(cx - card_w // 2, cy - card_h // 2, card_w, card_h)
+            draw_rounded_rect(surface, COLOR_WHITE, card_rect, radius=24, shadow_offset=10)
+
+            font_dlg_title = get_font(FONT_SIZE_MD, bold=True)
+            t_surf = font_dlg_title.render("Fortschritt zurücksetzen?", True, COLOR_CORAL)
+            surface.blit(t_surf, t_surf.get_rect(center=(cx, cy - 60)))
+
+            font_dlg_msg = get_font(FONT_SIZE_SM)
+            msg_surf = font_dlg_msg.render("Alle Sterne und freigeschalteten Level werden gelöscht.", True, COLOR_TEXT)
+            surface.blit(msg_surf, msg_surf.get_rect(center=(cx, cy - 15)))
+
+            self._btn_confirm_reset.draw(surface)
+            self._btn_cancel_reset.draw(surface)
 
     def _draw_tile(self, surface: pygame.Surface, slot_idx: int, level_num: int, rect: pygame.Rect) -> None:
         save = self.game.save_data

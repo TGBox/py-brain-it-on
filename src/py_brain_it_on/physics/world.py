@@ -48,6 +48,8 @@ class DrawnStroke:
     body: Optional[pymunk.Body] = None
     color: tuple = (80, 70, 65)
     is_static: bool = False
+    connection_points: list[tuple[float, float]] = field(default_factory=list)
+
 
 
 @dataclass
@@ -287,14 +289,32 @@ class PhysicsWorld:
     # Gezeichnete Linien als Physik
     # ------------------------------------------------------------------
 
-    def _is_point_connected_to_static(self, p: tuple[float, float], threshold: float = 8.0) -> bool:
-        """Prüft, ob ein Punkt nahe an einem statischen Level-Objekt oder statischem Strich liegt."""
-        v = pymunk.Vec2d(*p)
-        for shape in self._level_static_shapes:
-            info = shape.point_query(v)
-            if info.distance <= threshold:
-                return True
-        return False
+    def find_connection_points(self, points: list[tuple[float, float]], threshold: float = 16.0) -> list[tuple[float, float]]:
+        """Findet alle Kontaktpunkte entlang des Strichs mit beliebigen statischen Oberflächen."""
+        contact_pts: list[tuple[float, float]] = []
+        # Alle gezeichneten Punkte sowie Zwischenschritte abtasten
+        sampled_pts = list(points)
+        for i in range(len(points) - 1):
+            p1 = pymunk.Vec2d(*points[i])
+            p2 = pymunk.Vec2d(*points[i + 1])
+            dist = p1.get_distance(p2)
+            if dist > 12.0:
+                steps = int(dist // 8.0)
+                for s in range(1, steps):
+                    inter = p1 + (p2 - p1) * (s / steps)
+                    sampled_pts.append((inter.x, inter.y))
+
+        for pt in sampled_pts:
+            v = pymunk.Vec2d(*pt)
+            for shape in self._level_static_shapes:
+                info = shape.point_query(v)
+                if info.distance <= threshold:
+                    cand = (info.point.x, info.point.y)
+                    # Mindestabstand zu anderen Nieten, damit es aufgeräumt aussieht
+                    if not any(pymunk.Vec2d(*c).get_distance(cand) < 20.0 for c in contact_pts):
+                        contact_pts.append(cand)
+                    break
+        return contact_pts
 
     @staticmethod
     def _compute_stroke_physics(points: list[tuple[float, float]], radius: float = SEGMENT_RADIUS):
@@ -338,17 +358,15 @@ class PhysicsWorld:
     def add_drawn_stroke(self, points: list[tuple[float, float]], color: tuple = (80, 70, 65)) -> DrawnStroke:
         """
         Fügt eine gezeichnete Polyline in die Physikwelt ein.
-        Hängt die Form an einem statischen Level-Objekt (Start- oder Endpunkt berührt Plattform/Wand),
-        wird sie als statischer Körper verankert.
-        Andernfalls wird sie zu einem dynamischen Physikobjekt (kann fallen, hebeln, Bälle stoßen).
+        Berührt die Form statische Oberflächen (Plattformen, Wände, Boden, Eimer),
+        wird sie als statischer Körper verankert und erhält sichtbare Verbindungspunkte.
+        Andernfalls wird sie zu einem dynamischen Physikobjekt.
         """
         if len(points) < 2:
             return DrawnStroke(points=points, color=color)
 
-        is_connected = (
-            self._is_point_connected_to_static(points[0])
-            or self._is_point_connected_to_static(points[-1])
-        )
+        conn_pts = self.find_connection_points(points, threshold=16.0)
+        is_connected = len(conn_pts) > 0
 
         if is_connected:
             body = pymunk.Body(body_type=pymunk.Body.STATIC)
@@ -361,7 +379,14 @@ class PhysicsWorld:
                 segments.append(seg)
             self.space.add(body, *segments)
             self._level_static_shapes.extend(segments)
-            stroke = DrawnStroke(points=points, segments=segments, body=body, color=color, is_static=True)
+            stroke = DrawnStroke(
+                points=points,
+                segments=segments,
+                body=body,
+                color=color,
+                is_static=True,
+                connection_points=conn_pts,
+            )
         else:
             com, mass, moment, local_segs = self._compute_stroke_physics(points)
             body = pymunk.Body(mass, moment, body_type=pymunk.Body.DYNAMIC)
@@ -374,7 +399,14 @@ class PhysicsWorld:
                 seg.collision_type = CTYPE_DRAWN
                 segments.append(seg)
             self.space.add(body, *segments)
-            stroke = DrawnStroke(points=points, segments=segments, body=body, color=color, is_static=False)
+            stroke = DrawnStroke(
+                points=points,
+                segments=segments,
+                body=body,
+                color=color,
+                is_static=False,
+                connection_points=[],
+            )
 
         self.drawn_strokes.append(stroke)
         return stroke
@@ -458,14 +490,18 @@ class PhysicsWorld:
                     stroke.color,
                 )
 
-            # Wenn statisch: Dezente Verankerungspunkte an den Kontaktstellen
-            if stroke.is_static and stroke.segments:
-                p_start = stroke.segments[0].body.local_to_world(stroke.segments[0].a)
-                p_end = stroke.segments[-1].body.local_to_world(stroke.segments[-1].b)
-                for pt in (p_start, p_end):
-                    if self._is_point_connected_to_static((pt.x, pt.y), threshold=18.0):
-                        pygame.draw.circle(surface, (50, 45, 40), (int(pt.x), int(pt.y)), SEGMENT_RADIUS + 3)
-                        pygame.draw.circle(surface, (230, 220, 200), (int(pt.x), int(pt.y)), SEGMENT_RADIUS + 1)
+            # Wenn statisch: Sichtbare metallische Verbindungspunkte (Niete) an allen Kontaktstellen mit Oberflächen
+            if stroke.is_static and stroke.connection_points:
+                for cx, cy in stroke.connection_points:
+                    icx, icy = int(cx), int(cy)
+                    # Äußerer dunkler Ring
+                    pygame.draw.circle(surface, (45, 40, 35), (icx, icy), SEGMENT_RADIUS + 5)
+                    # Heller Metall-Ring
+                    pygame.draw.circle(surface, (230, 225, 215), (icx, icy), SEGMENT_RADIUS + 3)
+                    # Nietkopf
+                    pygame.draw.circle(surface, (115, 105, 95), (icx, icy), SEGMENT_RADIUS)
+                    # Glanzpunkt
+                    pygame.draw.circle(surface, (255, 255, 255), (icx - 1, icy - 1), 2)
 
         # Dynamische Kästen / Säulen
         for dbox in self.dynamic_boxes:
@@ -552,6 +588,7 @@ class PhysicsWorld:
             seg.friction = WALL_FRICTION
             seg.collision_type = CTYPE_WALL
             self.space.add(seg)
+            self._level_static_shapes.append(seg)
 
     def _on_ball_enter_bucket(
         self, arbiter: pymunk.Arbiter, space: pymunk.Space, data: dict
