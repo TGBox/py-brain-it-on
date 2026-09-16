@@ -50,10 +50,35 @@ class DrawnStroke:
     is_static: bool = False
 
 
+@dataclass
+class DynamicBox:
+    """Ein dynamischer Kasten / Säule für Umwerf-, Hebe- oder Barriere-Puzzles."""
+    body: pymunk.Body
+    shape: pymunk.Poly
+    width: float
+    height: float
+    color: tuple = (180, 110, 70)
+    initial_y: float = 0.0
+    initial_angle: float = 0.0
+
+    @property
+    def is_toppled(self) -> bool:
+        """True wenn der Körper um mehr als 45 Grad gekippt ist."""
+        angle_diff = abs(self.body.angle - self.initial_angle) % (2 * math.pi)
+        if angle_diff > math.pi:
+            angle_diff = 2 * math.pi - angle_diff
+        return angle_diff > math.radians(45)
+
+    @property
+    def is_lifted(self) -> bool:
+        """True wenn der Körper mindestens 60px über seiner Startposition ist."""
+        return self.body.position.y < (self.initial_y - 60)
+
+
 class PhysicsWorld:
     """
     Kapselt eine pymunk.Space-Instanz mit Hilfsmethoden
-    für das Ball-in-Eimer-Spielprinzip.
+    für das Ball-in-Eimer-Spielprinzip und Spezialpuzzles.
     """
 
     def __init__(self) -> None:
@@ -62,6 +87,7 @@ class PhysicsWorld:
         self.space.damping = PHYSICS_DAMPING
 
         self.balls: list[BallState] = []
+        self.dynamic_boxes: list[DynamicBox] = []
         self.drawn_strokes: list[DrawnStroke] = []
         self.bucket_sensor_shape: Optional[pymunk.Shape] = None
         self._bucket_rect: Optional[tuple] = None  # (x, y, w, h) zum Zeichnen
@@ -69,6 +95,7 @@ class PhysicsWorld:
         self._level_static_shapes: list[pymunk.Shape] = []  # Für Verankerungstests
 
         self._balls_in_bucket: set[int] = set()    # IDs der Bälle im Eimer
+        self.balls_collided: bool = False
 
         # Kollisions-Handler Ball ↔ Eimer-Sensor
         self.space.on_collision(
@@ -76,6 +103,12 @@ class PhysicsWorld:
             CTYPE_BUCKET,
             begin=self._on_ball_enter_bucket,
             separate=self._on_ball_exit_bucket,
+        )
+        # Kollisions-Handler Ball ↔ Ball
+        self.space.on_collision(
+            CTYPE_BALL,
+            CTYPE_BALL,
+            begin=self._on_ball_collide_ball,
         )
 
         # Unsichtbare Außenwände
@@ -117,6 +150,50 @@ class PhysicsWorld:
         state = BallState(body=body, shape=shape, color=color)
         self.balls.append(state)
         return state
+
+    def add_dynamic_box(
+        self,
+        pos: tuple[float, float],
+        width: float,
+        height: float,
+        mass: float = 2.0,
+        color: tuple = (180, 110, 70),
+        friction: float = 0.7,
+        elasticity: float = 0.2,
+    ) -> DynamicBox:
+        """Fügt einen dynamischen Kasten (z. B. Säule, Kiste, Gegengewicht) hinzu."""
+        cx, cy = pos
+        moment = pymunk.moment_for_box(mass, (width, height))
+        body = pymunk.Body(mass, moment)
+        body.position = (cx, cy)
+        shape = pymunk.Poly.create_box(body, (width, height), radius=1)
+        shape.friction = friction
+        shape.elasticity = elasticity
+        shape.collision_type = CTYPE_WALL
+        self.space.add(body, shape)
+
+        dbox = DynamicBox(
+            body=body,
+            shape=shape,
+            width=width,
+            height=height,
+            color=color,
+            initial_y=cy,
+            initial_angle=0.0,
+        )
+        self.dynamic_boxes.append(dbox)
+        return dbox
+
+    def add_dynamic_pillar(
+        self,
+        pos: tuple[float, float],
+        width: float = 30,
+        height: float = 160,
+        mass: float = 2.5,
+        color: tuple = (220, 100, 60),
+    ) -> DynamicBox:
+        """Fügt eine aufrecht stehende Säule zum Umwerfen hinzu."""
+        return self.add_dynamic_box(pos, width, height, mass=mass, color=color, friction=0.8)
 
     # ------------------------------------------------------------------
     # Statische Segmente (Plattformen, Wände)
@@ -316,14 +393,23 @@ class PhysicsWorld:
         self.drawn_strokes.clear()
 
     def remove_all_dynamic(self) -> None:
-        """Entfernt alle Bälle (für Reset)."""
+        """Entfernt alle dynamischen Objekte (Bälle, Säulen, Kästen) für Reset."""
         for ball in self.balls:
             if ball.shape in self.space.shapes:
                 self.space.remove(ball.shape)
             if ball.body in self.space.bodies:
                 self.space.remove(ball.body)
         self.balls.clear()
+
+        for dbox in self.dynamic_boxes:
+            if dbox.shape in self.space.shapes:
+                self.space.remove(dbox.shape)
+            if dbox.body in self.space.bodies:
+                self.space.remove(dbox.body)
+        self.dynamic_boxes.clear()
+
         self._balls_in_bucket.clear()
+        self.balls_collided = False
 
     # ------------------------------------------------------------------
     # Siegbedingung
@@ -380,6 +466,14 @@ class PhysicsWorld:
                     if self._is_point_connected_to_static((pt.x, pt.y), threshold=18.0):
                         pygame.draw.circle(surface, (50, 45, 40), (int(pt.x), int(pt.y)), SEGMENT_RADIUS + 3)
                         pygame.draw.circle(surface, (230, 220, 200), (int(pt.x), int(pt.y)), SEGMENT_RADIUS + 1)
+
+        # Dynamische Kästen / Säulen
+        for dbox in self.dynamic_boxes:
+            verts = [dbox.body.local_to_world(v) for v in dbox.shape.get_vertices()]
+            pts = [(int(v.x), int(v.y)) for v in verts]
+            pygame.draw.polygon(surface, dbox.color, pts)
+            border_col = tuple(max(0, c - 40) for c in dbox.color)
+            pygame.draw.polygon(surface, border_col, pts, 2)
 
         # Bälle
         for ball in self.balls:
@@ -479,3 +573,9 @@ class PhysicsWorld:
                 for ball in self.balls:
                     if ball.body is shape.body:
                         ball.in_bucket = False
+
+    def _on_ball_collide_ball(
+        self, arbiter: pymunk.Arbiter, space: pymunk.Space, data: dict
+    ) -> bool:
+        self.balls_collided = True
+        return True

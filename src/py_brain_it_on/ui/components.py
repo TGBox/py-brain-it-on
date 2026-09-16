@@ -42,8 +42,8 @@ def get_font(size: int, bold: bool = False) -> pygame.font.Font:
         if ttf_path.exists():
             _font_cache[key] = pygame.font.Font(str(ttf_path), size)
         else:
-            # Fallback: Pygame-Systemfont
-            candidates = ["arialrounded", "comicsansms", "arial", None]
+            # Fallback: Pygame-Systemfont mit voller Umlaut-Unterstützung
+            candidates = ["segoeui", "arialrounded", "arial", "comicsansms", None]
             font = None
             for name in candidates:
                 try:
@@ -472,14 +472,14 @@ class HintOverlay:
         surface.blit(overlay, (0, 0))
 
         # Hinweis-Karte
-        card_w, card_h = 500, 220
+        card_w, card_h = 750, 300
         card_rect = pygame.Rect((w - card_w) // 2, (h - card_h) // 2, card_w, card_h)
         draw_rounded_rect(surface, COLOR_WHITE, card_rect, radius=24, shadow_offset=6)
 
         # Glühbirnen-Icon
-        font_lg = get_font(FONT_SIZE_MD + 4, bold=True)
+        font_lg = get_font(FONT_SIZE_MD + 6, bold=True)
         title_surf = font_lg.render("💡 Hinweis", True, COLOR_YELLOW_DARK)
-        surface.blit(title_surf, title_surf.get_rect(center=(w // 2, card_rect.y + 50)))
+        surface.blit(title_surf, title_surf.get_rect(center=(w // 2, card_rect.y + 55)))
 
         # Hinweistext (umgebrochen)
         font_md = get_font(FONT_SIZE_SM)
@@ -488,7 +488,7 @@ class HintOverlay:
         current = ""
         for word in words:
             test = (current + " " + word).strip()
-            if font_md.size(test)[0] < card_w - 60:
+            if font_md.size(test)[0] < card_w - 80:
                 current = test
             else:
                 if current:
@@ -497,16 +497,16 @@ class HintOverlay:
         if current:
             lines.append(current)
 
-        y = card_rect.y + 100
+        y = card_rect.y + 120
         for line in lines:
             line_surf = font_md.render(line, True, COLOR_TEXT)
             surface.blit(line_surf, line_surf.get_rect(center=(w // 2, y)))
-            y += font_md.get_height() + 4
+            y += font_md.get_height() + 8
 
         # "Tippe zum Schließen"
         font_xs = get_font(FONT_SIZE_XS)
-        close_surf = font_xs.render("Tippe zum Schließen", True, COLOR_TEXT_LIGHT)
-        surface.blit(close_surf, close_surf.get_rect(center=(w // 2, card_rect.bottom - 24)))
+        close_surf = font_xs.render("Klick oder Taste zum Schließen", True, COLOR_TEXT_LIGHT)
+        surface.blit(close_surf, close_surf.get_rect(center=(w // 2, card_rect.bottom - 28)))
 
 
 # ---------------------------------------------------------------------------

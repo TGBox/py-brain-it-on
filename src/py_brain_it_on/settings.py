@@ -14,8 +14,8 @@ FONTS_DIR = ASSETS_DIR / "fonts"
 # Fenster
 # ---------------------------------------------------------------------------
 WINDOW_TITLE = "Py Brain it on!"
-WINDOW_WIDTH = 800
-WINDOW_HEIGHT = 600
+WINDOW_WIDTH = 1920
+WINDOW_HEIGHT = 1080
 FPS = 60
 
 # ---------------------------------------------------------------------------
@@ -49,24 +49,24 @@ COLOR_STAR_EMPTY = (200, 190, 175)
 # ---------------------------------------------------------------------------
 # Physik
 # ---------------------------------------------------------------------------
-GRAVITY          = (0, 900)      # px/s^2 (y zeigt nach unten)
+GRAVITY          = (0, 1200)     # px/s^2 (y zeigt nach unten)
 PHYSICS_DAMPING  = 0.98          # Luftreibung (1=keine, 0=viel)
-BALL_RADIUS      = 18            # px
+BALL_RADIUS      = 24            # px
 BALL_MASS        = 1.0
 BALL_ELASTICITY  = 0.45
 BALL_FRICTION    = 0.6
 WALL_FRICTION    = 0.5
 WALL_ELASTICITY  = 0.2
-SEGMENT_RADIUS   = 4             # Dicke gezeichneter Linien (Physik)
+SEGMENT_RADIUS   = 5             # Dicke gezeichneter Linien (Physik)
 DRAW_SIMPLIFY_TOLERANCE = 4.0    # Douglas-Peucker-Toleranz in px
 
 # ---------------------------------------------------------------------------
 # Spielmechanik
 # ---------------------------------------------------------------------------
-TOTAL_LEVELS     = 5
-MAX_HINTS        = 3
-# Sternebewertung nach Strichanzahl
-STAR_STROKES = {3: 2, 2: 5}     # <=2 Striche → 3 Sterne, <=5 → 2 Sterne
+TOTAL_LEVELS     = 25
+MAX_HINTS        = 999           # Unbegrenzte Tipps
+# Standard-Sternebewertung nach Strichanzahl (wird von Leveln überschreibbar)
+STAR_STROKES     = {3: 1, 2: 3}  # <=1 Strich → 3 Sterne, <=3 → 2 Sterne, sonst 1 Stern
 
 # ---------------------------------------------------------------------------
 # Animationszeiten (Sekunden)
@@ -76,10 +76,10 @@ ANIM_MEDIUM = 0.30
 ANIM_SLOW   = 0.60
 
 # ---------------------------------------------------------------------------
-# Font-Größen
+# Font-Größen (für 1080p FullHD)
 # ---------------------------------------------------------------------------
-FONT_SIZE_XL = 48
-FONT_SIZE_LG = 36
-FONT_SIZE_MD = 28
-FONT_SIZE_SM = 22
-FONT_SIZE_XS = 16
+FONT_SIZE_XL = 72
+FONT_SIZE_LG = 52
+FONT_SIZE_MD = 36
+FONT_SIZE_SM = 26
+FONT_SIZE_XS = 20

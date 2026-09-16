@@ -27,19 +27,19 @@ class MenuScene(BaseScene):
         self._title_tween = Tween(-80, 0, 0.8, ease_out_bounce)
         self._subtitle_tween = Tween(0, 1, 1.2, ease_out_bounce)
 
-        # Buttons
-        btn_w, btn_h = 260, 60
+        # Buttons (für 1080p)
+        btn_w, btn_h = 360, 80
         cx = WINDOW_WIDTH // 2
         self._btn_play = RoundedButton(
             "Spielen",
-            pygame.Rect(cx - btn_w // 2, 320, btn_w, btn_h),
+            pygame.Rect(cx - btn_w // 2, 580, btn_w, btn_h),
             color=COLOR_CORAL,
             on_click=self._on_play,
             font_size=FONT_SIZE_MD,
         )
         self._btn_quit = RoundedButton(
             "Beenden",
-            pygame.Rect(cx - btn_w // 2, 400, btn_w, btn_h),
+            pygame.Rect(cx - btn_w // 2, 690, btn_w, btn_h),
             color=(140, 130, 125),
             font_size=FONT_SIZE_MD,
             on_click=self._on_quit,
@@ -50,12 +50,12 @@ class MenuScene(BaseScene):
             {
                 "x": random.randint(50, WINDOW_WIDTH - 50),
                 "y": random.randint(50, WINDOW_HEIGHT - 50),
-                "r": random.randint(15, 40),
+                "r": random.randint(25, 60),
                 "color": random.choice([COLOR_CORAL, COLOR_TEAL, COLOR_YELLOW, COLOR_PURPLE]),
-                "speed": random.uniform(20, 60),
+                "speed": random.uniform(30, 80),
                 "phase": random.uniform(0, math.pi * 2),
             }
-            for _ in range(12)
+            for _ in range(16)
         ]
         self._t = 0.0
         self._pulse = PulseEffect(0.97, 1.03, 1.5)
@@ -95,59 +95,63 @@ class MenuScene(BaseScene):
             surface.blit(bubble_surf, (int(b["x"]) - b["r"] - 2, int(b["y"]) - b["r"] - 2))
 
         # Dekoratives Gehirn-Symbol (gezeichnet)
-        brain_cx, brain_cy = WINDOW_WIDTH // 2, 180
+        brain_cx, brain_cy = WINDOW_WIDTH // 2, 330
         scale = self._pulse.scale
-        r = int(55 * scale)
+        r = int(90 * scale)
         # Äußerer Kreis
         pygame.draw.circle(surface, COLOR_CORAL, (brain_cx, brain_cy), r)
-        pygame.draw.circle(surface, (240, 180, 160), (brain_cx, brain_cy), r - 6)
+        pygame.draw.circle(surface, (240, 180, 160), (brain_cx, brain_cy), r - 10)
         # Falten-Linien
-        for angle, length in [(0.3, 20), (1.1, 16), (2.0, 18), (2.8, 14)]:
+        for angle, length in [(0.3, 35), (1.1, 28), (2.0, 32), (2.8, 25)]:
             import math as _m
-            ex = brain_cx + int(_m.cos(angle) * (r - 14))
-            ey = brain_cy + int(_m.sin(angle) * (r - 14))
-            ex2 = brain_cx + int(_m.cos(angle) * (r - 14 + length * 0.5))
-            ey2 = brain_cy + int(_m.sin(angle) * (r - 14 + length * 0.5))
-            pygame.draw.line(surface, (220, 150, 130), (ex, ey), (ex2, ey2), 3)
+            ex = brain_cx + int(_m.cos(angle) * (r - 22))
+            ey = brain_cy + int(_m.sin(angle) * (r - 22))
+            ex2 = brain_cx + int(_m.cos(angle) * (r - 22 + length * 0.5))
+            ey2 = brain_cy + int(_m.sin(angle) * (r - 22 + length * 0.5))
+            pygame.draw.line(surface, (220, 150, 130), (ex, ey), (ex2, ey2), 5)
         # Trennlinie Mitte
         pygame.draw.line(surface, (220, 150, 130),
-                         (brain_cx, brain_cy - r + 10),
-                         (brain_cx, brain_cy + r - 10), 2)
+                         (brain_cx, brain_cy - r + 15),
+                         (brain_cx, brain_cy + r - 15), 4)
 
         # Titel mit Bounce-Animation
         title_y_offset = self._title_tween.value
-        font_title = get_font(FONT_SIZE_XL + 8, bold=True)
+        font_title = get_font(FONT_SIZE_XL + 16, bold=True)
         title_surf = font_title.render("Py Brain It On!", True, COLOR_TEXT)
         # Schatten
         shadow_surf = font_title.render("Py Brain It On!", True, (0, 0, 0))
         shadow_surf.set_alpha(30)
-        surface.blit(shadow_surf, shadow_surf.get_rect(center=(WINDOW_WIDTH // 2 + 3, 78 + 3 + title_y_offset)))
-        surface.blit(title_surf, title_surf.get_rect(center=(WINDOW_WIDTH // 2, 78 + title_y_offset)))
+        surface.blit(shadow_surf, shadow_surf.get_rect(center=(WINDOW_WIDTH // 2 + 4, 150 + 4 + title_y_offset)))
+        surface.blit(title_surf, title_surf.get_rect(center=(WINDOW_WIDTH // 2, 150 + title_y_offset)))
 
-        # Untertitel
+        # Untertitel mit korrektem Umlaut
         subtitle_alpha = int(min(255, self._subtitle_tween.value * 255))
-        font_sub = get_font(FONT_SIZE_SM)
-        sub_surf = font_sub.render("Tricky Raetsel", True, (120, 110, 105))
+        font_sub = get_font(FONT_SIZE_MD)
+        sub_surf = font_sub.render("Tricky Rätsel für schlaue Köpfe", True, (120, 110, 105))
         sub_surf.set_alpha(subtitle_alpha)
-        surface.blit(sub_surf, sub_surf.get_rect(center=(WINDOW_WIDTH // 2, 240)))
+        surface.blit(sub_surf, sub_surf.get_rect(center=(WINDOW_WIDTH // 2, 465)))
 
         # Fortschritts-Info
         save = self.game.save_data
         solved = sum(1 for v in save["levels"].values() if v.get("solved", False))
         if solved > 0:
-            font_prog = get_font(FONT_SIZE_XS)
-            prog_text = f"Fortschritt: {solved}/{len(save['levels'])} Level gelöst"
-            prog_surf = font_prog.render(prog_text, True, (150, 140, 135))
-            surface.blit(prog_surf, prog_surf.get_rect(center=(WINDOW_WIDTH // 2, 285)))
+            font_prog = get_font(FONT_SIZE_SM)
+            prog_text = f"Fortschritt: {solved}/{TOTAL_LEVELS} Level gelöst"
+            prog_surf = font_prog.render(prog_text, True, (140, 130, 125))
+            surface.blit(prog_surf, prog_surf.get_rect(center=(WINDOW_WIDTH // 2, 520)))
 
         # Buttons
         self._btn_play.draw(surface)
         self._btn_quit.draw(surface)
 
+        # Hinweis zu Vollbild & Steuerung
+        font_hint = get_font(FONT_SIZE_XS)
+        ctrl_surf = font_hint.render("F11: Vollbild / Fenster | ESC: Beenden", True, (170, 160, 155))
+        surface.blit(ctrl_surf, (40, WINDOW_HEIGHT - 45))
+
         # Version
-        font_ver = get_font(12)
-        ver_surf = font_ver.render(f"v0.1.0 — {TOTAL_LEVELS} Level", True, (180, 170, 165))
-        surface.blit(ver_surf, (WINDOW_WIDTH - 130, WINDOW_HEIGHT - 22))
+        ver_surf = font_hint.render(f"v1.0.0 — {TOTAL_LEVELS} Level (FullHD)", True, (170, 160, 155))
+        surface.blit(ver_surf, (WINDOW_WIDTH - ver_surf.get_width() - 40, WINDOW_HEIGHT - 45))
 
     def _on_play(self) -> None:
         from .level_select import LevelSelectScene

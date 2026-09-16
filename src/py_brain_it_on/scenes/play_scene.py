@@ -49,8 +49,8 @@ class PlayScene(BaseScene):
     """Spielszene: Zeichnen + Physik + UI."""
 
     # Bereiche
-    HEADER_H = 70
-    TOOLBAR_H = 60   # untere Leiste mit Buttons
+    HEADER_H = 100
+    TOOLBAR_H = 90   # untere Leiste mit Buttons
 
     def __init__(self, game, level: int) -> None:
         super().__init__(game)
@@ -75,27 +75,27 @@ class PlayScene(BaseScene):
         self._star_display_stars = 0
         self._star_reveal_timer = 0.0
 
-        # Hinweis
-        self._hints_left = 3
+        # Hinweis (unbegrenzt verfügbar)
         self._show_hint = False
         self._hint_timer = 0.0
 
         # Buttons (Toolbar)
+        btn_y = WINDOW_HEIGHT - self.TOOLBAR_H + 18
         self._btn_start  = RoundedButton(
-            "Starten", pygame.Rect(WINDOW_WIDTH // 2 - 180, WINDOW_HEIGHT - self.TOOLBAR_H + 8, 150, 44),
+            "▶ Starten", pygame.Rect(WINDOW_WIDTH // 2 - 250, btn_y, 220, 54),
             color=COLOR_GREEN, font_size=FONT_SIZE_SM, on_click=self._on_start,
         )
         self._btn_reset  = RoundedButton(
-            "Neu zeichnen", pygame.Rect(WINDOW_WIDTH // 2 - 10, WINDOW_HEIGHT - self.TOOLBAR_H + 8, 170, 44),
+            "↺ Neu zeichnen", pygame.Rect(WINDOW_WIDTH // 2 + 10, btn_y, 240, 54),
             color=COLOR_CORAL, font_size=FONT_SIZE_SM, on_click=self._on_reset,
         )
         self._btn_hint   = RoundedButton(
-            f"Tipp ({self._hints_left})", pygame.Rect(WINDOW_WIDTH - 140, WINDOW_HEIGHT - self.TOOLBAR_H + 8, 128, 44),
+            "💡 Tipp", pygame.Rect(WINDOW_WIDTH - 210, btn_y, 180, 54),
             color=COLOR_YELLOW, font_size=FONT_SIZE_SM, on_click=self._on_hint,
         )
         self._btn_back   = RoundedButton(
-            "< Zurueck", pygame.Rect(12, WINDOW_HEIGHT - self.TOOLBAR_H + 8, 120, 44),
-            color=(140, 130, 125), font_size=FONT_SIZE_XS, on_click=self._on_back,
+            "← Zurück", pygame.Rect(30, btn_y, 160, 54),
+            color=(140, 130, 125), font_size=FONT_SIZE_SM, on_click=self._on_back,
         )
         self._btn_next: RoundedButton | None = None
 
@@ -174,10 +174,10 @@ class PlayScene(BaseScene):
             self._sim_time += dt
             self._world.step(dt)
 
-            # Sieg prüfen
-            if self._world.all_balls_in_bucket:
+            # Sieg über Level-Prüfung testen
+            if self._level.check_victory(self._world, dt):
                 self._success_timer += dt
-                if self._success_timer >= 0.6:   # kurz warten, bis zur Ruhe
+                if self._success_timer >= 0.5:   # kurz stabil halten
                     self._on_success()
             else:
                 self._success_timer = 0.0
@@ -232,18 +232,18 @@ class PlayScene(BaseScene):
         elif self._state == STATE_SIMULATING:
             self._btn_reset.draw(surface)
             # "Physik läuft..." Anzeige
-            font_sim = get_font(FONT_SIZE_XS)
-            sim_surf = font_sim.render("Physik laeuft...", True, COLOR_TEXT_LIGHT)
+            font_sim = get_font(FONT_SIZE_SM)
+            sim_surf = font_sim.render("⚙ Physik läuft...", True, COLOR_TEXT_LIGHT)
             surface.blit(sim_surf, sim_surf.get_rect(
-                center=(WINDOW_WIDTH // 2 - 30, WINDOW_HEIGHT - self.TOOLBAR_H // 2)
+                center=(WINDOW_WIDTH // 2 - 120, WINDOW_HEIGHT - self.TOOLBAR_H // 2)
             ))
         self._btn_back.draw(surface)
         self._btn_hint.draw(surface)
 
         # Strichanzahl
-        font_strokes = get_font(FONT_SIZE_XS)
-        sc_surf = font_strokes.render(f"Striche: {self._stroke_count}", True, COLOR_TEXT_LIGHT)
-        surface.blit(sc_surf, (WINDOW_WIDTH // 2 + 80, WINDOW_HEIGHT - self.TOOLBAR_H + 20))
+        font_strokes = get_font(FONT_SIZE_SM)
+        sc_surf = font_strokes.render(f"Gezeichnete Striche: {self._stroke_count}", True, COLOR_TEXT_LIGHT)
+        surface.blit(sc_surf, sc_surf.get_rect(midleft=(WINDOW_WIDTH // 2 + 150, WINDOW_HEIGHT - self.TOOLBAR_H // 2)))
 
         # Hinweis-Overlay
         if self._show_hint:
@@ -262,23 +262,21 @@ class PlayScene(BaseScene):
         pygame.draw.rect(surface, COLOR_WHITE, header_rect)
 
         # Level-Badge
-        badge_rect = pygame.Rect(16, 12, 100, 32)
-        draw_rounded_rect(surface, COLOR_TEAL, badge_rect, radius=10, shadow_offset=2)
-        font_badge = get_font(FONT_SIZE_XS, bold=True)
+        badge_rect = pygame.Rect(30, 24, 150, 52)
+        draw_rounded_rect(surface, COLOR_TEAL, badge_rect, radius=12, shadow_offset=2)
+        font_badge = get_font(FONT_SIZE_SM, bold=True)
         badge_surf = font_badge.render(f"Level {self.level_num}", True, COLOR_WHITE)
         surface.blit(badge_surf, badge_surf.get_rect(center=badge_rect.center))
 
-        # Titel
-        font_title = get_font(FONT_SIZE_SM, bold=True)
+        # Titel & Ziel
+        font_title = get_font(FONT_SIZE_MD, bold=True)
         title_surf = font_title.render(self._level.TITLE, True, COLOR_TEXT)
-        surface.blit(title_surf, title_surf.get_rect(center=(WINDOW_WIDTH // 2, self.HEADER_H // 2)))
+        surface.blit(title_surf, title_surf.get_rect(center=(WINDOW_WIDTH // 2, 38)))
 
-        # Ziel-Text
-        font_goal = get_font(FONT_SIZE_XS)
-        goal_surf = font_goal.render("Bringe den Ball in den Eimer!", True, COLOR_TEXT_LIGHT)
-        surface.blit(goal_surf, goal_surf.get_rect(
-            center=(WINDOW_WIDTH // 2, self.HEADER_H // 2 + 18)
-        ))
+        font_goal = get_font(FONT_SIZE_SM)
+        goal_text = getattr(self._level, "GOAL_DESCRIPTION", "Bringe den Ball in den Eimer!")
+        goal_surf = font_goal.render(goal_text, True, COLOR_CORAL)
+        surface.blit(goal_surf, goal_surf.get_rect(center=(WINDOW_WIDTH // 2, 74)))
 
         # Zustand-Indikator (Punkt oben rechts)
         state_color = {
@@ -291,27 +289,24 @@ class PlayScene(BaseScene):
             STATE_SIMULATING: "Simulation",
             STATE_SUCCESS: "Geschafft!",
         }.get(self._state, "")
-        pygame.draw.circle(surface, state_color, (WINDOW_WIDTH - 100, self.HEADER_H // 2), 7)
-        font_state = get_font(FONT_SIZE_XS)
+        pygame.draw.circle(surface, state_color, (WINDOW_WIDTH - 210, self.HEADER_H // 2), 9)
+        font_state = get_font(FONT_SIZE_SM, bold=True)
         state_surf = font_state.render(state_label, True, state_color)
-        surface.blit(state_surf, state_surf.get_rect(midleft=(WINDOW_WIDTH - 88, self.HEADER_H // 2)))
+        surface.blit(state_surf, state_surf.get_rect(midleft=(WINDOW_WIDTH - 190, self.HEADER_H // 2)))
 
     def _draw_hint_overlay(self, surface: pygame.Surface) -> None:
         overlay = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT), pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, 130))
+        overlay.fill((0, 0, 0, 140))
         surface.blit(overlay, (0, 0))
 
-        card_w, card_h = 500, 200
+        card_w, card_h = 680, 260
         cx, cy = WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2
         card_rect = pygame.Rect(cx - card_w // 2, cy - card_h // 2, card_w, card_h)
-        draw_rounded_rect(surface, COLOR_WHITE, card_rect, radius=20, shadow_offset=6)
+        draw_rounded_rect(surface, COLOR_WHITE, card_rect, radius=24, shadow_offset=8)
 
-        font_title = get_font(FONT_SIZE_SM, bold=True)
-        t_surf = font_title.render("Tipp", True, COLOR_YELLOW)
-        # Tipp-Kreis als Icon
-        pygame.draw.circle(surface, COLOR_YELLOW, (cx - 60, cy - 30), 12)
-        pygame.draw.circle(surface, COLOR_WHITE, (cx - 60, cy - 30), 12, 2)
-        surface.blit(t_surf, t_surf.get_rect(center=(cx + 10, cy - 30)))
+        font_title = get_font(FONT_SIZE_MD, bold=True)
+        t_surf = font_title.render("💡 Level-Tipp", True, COLOR_YELLOW)
+        surface.blit(t_surf, t_surf.get_rect(center=(cx, cy - 65)))
 
         font_hint = get_font(FONT_SIZE_SM)
         # Zeilenumbruch
@@ -328,59 +323,62 @@ class PlayScene(BaseScene):
         if cur:
             lines.append(cur)
 
-        y = cy - 5
+        y = cy - 10
         for line in lines:
             ls = font_hint.render(line, True, COLOR_TEXT)
             surface.blit(ls, ls.get_rect(center=(cx, y)))
-            y += font_hint.get_height() + 4
+            y += font_hint.get_height() + 6
 
         font_xs = get_font(FONT_SIZE_XS)
-        close_s = font_xs.render("Klick zum Schliessen", True, COLOR_TEXT_LIGHT)
-        surface.blit(close_s, close_s.get_rect(center=(cx, card_rect.bottom - 20)))
+        close_s = font_xs.render("Klicke irgendwo zum Schließen", True, COLOR_TEXT_LIGHT)
+        surface.blit(close_s, close_s.get_rect(center=(cx, card_rect.bottom - 26)))
 
     def _draw_success_overlay(self, surface: pygame.Surface) -> None:
         scale = self._success_tween.value
 
         overlay = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT), pygame.SRCALPHA)
-        alpha = min(170, int(170 * scale))
+        alpha = min(180, int(180 * scale))
         overlay.fill((0, 0, 0, alpha))
         surface.blit(overlay, (0, 0))
 
-        card_w, card_h = 480, 310
+        card_w, card_h = 640, 420
         cx, cy = WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2
         cw = int(card_w * min(1.0, scale * 1.5))
         ch = int(card_h * min(1.0, scale * 1.5))
         card_rect = pygame.Rect(cx - cw // 2, cy - ch // 2, cw, ch)
-        draw_rounded_rect(surface, COLOR_WHITE, card_rect, radius=24, shadow_offset=10)
+        draw_rounded_rect(surface, COLOR_WHITE, card_rect, radius=28, shadow_offset=12)
 
         if scale > 0.4:
             font_big = get_font(FONT_SIZE_LG, bold=True)
             ok_surf = font_big.render("Geschafft!", True, COLOR_GREEN)
-            surface.blit(ok_surf, ok_surf.get_rect(center=(cx, cy - 90)))
+            surface.blit(ok_surf, ok_surf.get_rect(center=(cx, cy - 120)))
 
             # Sterne zeichnen
-            star_r = 28
+            star_r = 38
             spacing = int(star_r * 2.8)
-            star_y = cy - 20
+            star_y = cy - 30
             for i in range(3):
                 sx = cx - spacing + i * spacing
                 filled = i < self._star_display_stars and self._star_reveal_timer > i * 0.3 + 0.2
                 draw_star(surface, (sx, star_y), star_r, filled=filled)
 
-            font_sm = get_font(FONT_SIZE_SM)
-            labels = ["Gut gemacht!", "Super!", "Perfekt!"]
+            font_sm = get_font(FONT_SIZE_MD, bold=True)
+            labels = ["Gut gemacht!", "Klasse gelöst!", "Perfekt gemeistert!"]
             lbl = labels[self._star_display_stars - 1] if self._star_display_stars > 0 else ""
-            lbl_surf = font_sm.render(lbl, True, COLOR_TEXT_LIGHT)
-            surface.blit(lbl_surf, lbl_surf.get_rect(center=(cx, cy + 40)))
+            lbl_surf = font_sm.render(lbl, True, COLOR_TEXT)
+            surface.blit(lbl_surf, lbl_surf.get_rect(center=(cx, cy + 45)))
 
             # Strich-Info
-            stroke_info = get_font(FONT_SIZE_XS).render(
-                f"{self._stroke_count} Strich(e) benutzt", True, COLOR_TEXT_LIGHT
+            thresholds = getattr(self._level, "STAR_THRESHOLDS", (1, 3))
+            font_info = get_font(FONT_SIZE_SM)
+            stroke_info = font_info.render(
+                f"{self._stroke_count} Strich(e) verwendet (3 Sterne: ≤{thresholds[0]}, 2 Sterne: ≤{thresholds[1]})",
+                True, COLOR_TEXT_LIGHT
             )
-            surface.blit(stroke_info, stroke_info.get_rect(center=(cx, cy + 68)))
+            surface.blit(stroke_info, stroke_info.get_rect(center=(cx, cy + 85)))
 
             # Weiter-Button
-            if self._star_reveal_timer > 1.0 and self._btn_next:
+            if self._star_reveal_timer > 0.8 and self._btn_next:
                 self._btn_next.draw(surface)
             self._btn_back.draw(surface)
 
@@ -400,12 +398,9 @@ class PlayScene(BaseScene):
         self._reset_world()
 
     def _on_hint(self) -> None:
-        if self._hints_left <= 0:
-            return
-        self._hints_left -= 1
-        self._btn_hint.text = f"Tipp ({self._hints_left})"
-        self._show_hint = True
-        self._hint_timer = 8.0  # 8 Sekunden Anzeigedauer
+        self._show_hint = not self._show_hint
+        if self._show_hint:
+            self._hint_timer = 12.0
 
     def _on_success(self) -> None:
         if self._state == STATE_SUCCESS:
@@ -415,9 +410,10 @@ class PlayScene(BaseScene):
         self._star_reveal_timer = 0.0
 
         # Sternebewertung
-        if self._stroke_count <= STAR_STROKES[3]:
+        thresh = getattr(self._level, "STAR_THRESHOLDS", (1, 3))
+        if self._stroke_count <= thresh[0]:
             self._star_display_stars = 3
-        elif self._stroke_count <= STAR_STROKES[2]:
+        elif self._stroke_count <= thresh[1]:
             self._star_display_stars = 2
         else:
             self._star_display_stars = 1
@@ -431,14 +427,14 @@ class PlayScene(BaseScene):
         # Weiter-Button aufbauen
         cx, cy = WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2
         if self.level_num < TOTAL_LEVELS:
-            label = "Naechstes Level"
+            label = "Nächstes Level ▶"
             action = self._on_next_level
         else:
-            label = "Alle Level!"
+            label = "Alle Level gemeistert! ★"
             action = self._on_back_to_menu
         self._btn_next = RoundedButton(
             label,
-            pygame.Rect(cx - 120, cy + 100, 240, 52),
+            pygame.Rect(cx - 150, cy + 125, 300, 58),
             color=COLOR_CORAL,
             font_size=FONT_SIZE_SM,
             on_click=action,

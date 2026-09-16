@@ -1,5 +1,5 @@
 """
-level_select.py — Level-Auswahl mit Sterneanzeige und Lock-System.
+level_select.py — Level-Auswahl mit Seiten-Navigation (Pagination) für 25+ Level.
 """
 from __future__ import annotations
 
@@ -14,130 +14,194 @@ from ..settings import (
     TOTAL_LEVELS, WINDOW_WIDTH, WINDOW_HEIGHT,
 )
 from ..ui.components import (
-    RoundedButton, get_font, draw_rounded_rect, draw_text_centered, draw_star,
+    RoundedButton, get_font, draw_rounded_rect, draw_star,
 )
 from ..ui.animations import Tween, ease_out_back
 
 
-# Level-Farben (eine pro Level)
+# Farbpalette für die Kacheln
 _LEVEL_COLORS = [
     (255, 107, 107),   # Korallrot
     (78, 205, 196),    # Türkis
-    (255, 230, 109),   # Gelb
+    (255, 220, 90),    # Gelb
     (162, 105, 220),   # Lila
     (85, 210, 130),    # Grün
-    (255, 165, 60),    # Orange
-    (100, 181, 246),   # Hellblau
-    (240, 98, 146),    # Pink
+    (255, 160, 50),    # Orange
+    (100, 180, 245),   # Hellblau
+    (240, 100, 150),   # Pink
+    (80, 200, 200),    # Meerblau
+    (190, 120, 230),   # Violett
 ]
 
 
 def _draw_lock(surface: pygame.Surface, cx: int, cy: int, color: tuple) -> None:
-    """Zeichnet ein einfaches Schloss-Symbol."""
+    """Zeichnet ein sauberes Schloss-Symbol für gesperrte Level."""
     # Bügel
-    pygame.draw.arc(surface, color, pygame.Rect(cx - 9, cy - 14, 18, 16), 0, math.pi, 3)
+    pygame.draw.arc(surface, color, pygame.Rect(cx - 16, cy - 25, 32, 28), 0, math.pi, 5)
     # Körper
-    pygame.draw.rect(surface, color, pygame.Rect(cx - 12, cy - 4, 24, 18), border_radius=3)
+    pygame.draw.rect(surface, color, pygame.Rect(cx - 20, cy - 8, 40, 32), border_radius=6)
     # Schlüsselloch
-    pygame.draw.circle(surface, COLOR_WHITE, (cx, cy + 3), 3)
+    pygame.draw.circle(surface, COLOR_WHITE, (cx, cy + 4), 5)
+    pygame.draw.line(surface, COLOR_WHITE, (cx, cy + 4), (cx, cy + 14), 3)
 
 
 class LevelSelectScene(BaseScene):
-    """Level-Auswahl-Szene."""
+    """Level-Auswahl-Szene mit Blättern durch Seiten (10 Level pro Seite)."""
+
+    LEVELS_PER_PAGE = 10
 
     def __init__(self, game) -> None:
         super().__init__(game)
         self._t = 0.0
+        self.page = 0
+        self.total_pages = math.ceil(TOTAL_LEVELS / self.LEVELS_PER_PAGE)
+
         # Einblend-Animationen für Kacheln
         self._tile_tweens = [
-            Tween(0, 1, 0.4 + i * 0.06, ease_out_back)
-            for i in range(TOTAL_LEVELS)
+            Tween(0, 1, 0.35 + i * 0.04, ease_out_back)
+            for i in range(self.LEVELS_PER_PAGE)
         ]
+
+        # Buttons
         self._back_btn = RoundedButton(
-            "< Zurueck",
-            pygame.Rect(20, 15, 130, 44),
+            "← Zurück",
+            pygame.Rect(60, 45, 180, 60),
             color=(140, 130, 125),
             font_size=FONT_SIZE_SM,
             on_click=self._on_back,
         )
-        # Layout: 4×2 Grid
+        self._prev_btn = RoundedButton(
+            "← Vorherige",
+            pygame.Rect(WINDOW_WIDTH // 2 - 270, 770, 200, 56),
+            color=COLOR_TEAL,
+            font_size=FONT_SIZE_SM,
+            on_click=self._on_prev_page,
+        )
+        self._next_btn = RoundedButton(
+            "Nächste →",
+            pygame.Rect(WINDOW_WIDTH // 2 + 70, 770, 200, 56),
+            color=COLOR_TEAL,
+            font_size=FONT_SIZE_SM,
+            on_click=self._on_next_page,
+        )
+
         self._tile_rects = self._calc_tile_rects()
         self._hovered: int | None = None
 
     def on_enter(self) -> None:
+        self._reset_tweens()
+
+    def _reset_tweens(self) -> None:
         for tw in self._tile_tweens:
             tw.reset()
 
+    def _on_prev_page(self) -> None:
+        if self.page > 0:
+            self.page -= 1
+            self._reset_tweens()
+
+    def _on_next_page(self) -> None:
+        if self.page < self.total_pages - 1:
+            self.page += 1
+            self._reset_tweens()
+
     def handle_event(self, event: pygame.event.Event) -> None:
         self._back_btn.handle_event(event)
+        if self.page > 0:
+            self._prev_btn.handle_event(event)
+        if self.page < self.total_pages - 1:
+            self._next_btn.handle_event(event)
+
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            for i, rect in enumerate(self._tile_rects):
+            for slot_idx, rect in enumerate(self._tile_rects):
+                level_num = self.page * self.LEVELS_PER_PAGE + slot_idx + 1
+                if level_num > TOTAL_LEVELS:
+                    break
                 if rect.collidepoint(event.pos):
-                    if self._is_unlocked(i + 1):
-                        self._start_level(i + 1)
+                    if self._is_unlocked(level_num):
+                        self._start_level(level_num)
                     return
 
     def update(self, dt: float) -> None:
         self._t += dt
         self._back_btn.update(dt)
+        if self.page > 0:
+            self._prev_btn.update(dt)
+        if self.page < self.total_pages - 1:
+            self._next_btn.update(dt)
+
         for tw in self._tile_tweens:
             tw.update(dt)
+
         # Hover-Erkennung
         mx, my = pygame.mouse.get_pos()
         self._hovered = None
-        for i, rect in enumerate(self._tile_rects):
-            if rect.collidepoint((mx, my)) and self._is_unlocked(i + 1):
-                self._hovered = i
+        for slot_idx, rect in enumerate(self._tile_rects):
+            level_num = self.page * self.LEVELS_PER_PAGE + slot_idx + 1
+            if level_num <= TOTAL_LEVELS and rect.collidepoint((mx, my)) and self._is_unlocked(level_num):
+                self._hovered = slot_idx
 
     def draw(self, surface: pygame.Surface) -> None:
         surface.fill(COLOR_BG)
 
         # Überschrift
-        font_title = get_font(FONT_SIZE_LG, bold=True)
-        title_surf = font_title.render("Level Auswahl", True, COLOR_TEXT)
-        surface.blit(title_surf, title_surf.get_rect(center=(WINDOW_WIDTH // 2, 48)))
+        font_title = get_font(FONT_SIZE_LG + 6, bold=True)
+        title_surf = font_title.render("Level-Auswahl", True, COLOR_TEXT)
+        surface.blit(title_surf, title_surf.get_rect(center=(WINDOW_WIDTH // 2, 75)))
 
-        # Punkte-Linie
-        pygame.draw.line(surface, (220, 210, 200), (60, 78), (WINDOW_WIDTH - 60, 78), 2)
+        # Trennlinie
+        pygame.draw.line(surface, (220, 210, 200), (100, 135), (WINDOW_WIDTH - 100, 135), 3)
 
-        # Level-Kacheln
-        for i, rect in enumerate(self._tile_rects):
-            self._draw_tile(surface, i, rect)
+        # Level-Kacheln der aktuellen Seite
+        for slot_idx, rect in enumerate(self._tile_rects):
+            level_num = self.page * self.LEVELS_PER_PAGE + slot_idx + 1
+            if level_num <= TOTAL_LEVELS:
+                self._draw_tile(surface, slot_idx, level_num, rect)
 
         # Zurück-Button
         self._back_btn.draw(surface)
 
+        # Seiten-Navigation (wenn mehrere Seiten)
+        if self.total_pages > 1:
+            if self.page > 0:
+                self._prev_btn.draw(surface)
+            if self.page < self.total_pages - 1:
+                self._next_btn.draw(surface)
+
+            font_page = get_font(FONT_SIZE_SM, bold=True)
+            page_str = f"Seite {self.page + 1} von {self.total_pages}"
+            page_surf = font_page.render(page_str, True, COLOR_TEXT_LIGHT)
+            surface.blit(page_surf, page_surf.get_rect(center=(WINDOW_WIDTH // 2, 798)))
+
         # Gesamt-Sterne unten
         save = self.game.save_data
-        total_stars = sum(v.get("stars", 0) for v in save["levels"].values())
+        total_stars = sum(v.get("stars", 0) for v in save.get("levels", {}).values())
         max_stars = TOTAL_LEVELS * 3
-        # Sterne zeichnen
-        star_y = WINDOW_HEIGHT - 22
-        star_r = 9
-        star_count_display = min(total_stars, max_stars)
-        total_w_stars = 3 * star_r * 2 + 2 * 4  # 3 Sterne mit Abstand
-        text_before = f"{total_stars} / {max_stars} Sterne"
+        star_y = WINDOW_HEIGHT - 65
+        star_r = 16
+
         font_sm = get_font(FONT_SIZE_SM)
-        text_surf = font_sm.render(text_before, True, (150, 140, 135))
-        total_content_w = total_w_stars + 8 + text_surf.get_width()
+        text_before = f"Gesamt: {total_stars} / {max_stars} Sterne gesammelt"
+        text_surf = font_sm.render(text_before, True, (130, 120, 115))
+        total_w_stars = 3 * star_r * 2 + 2 * 6
+        total_content_w = total_w_stars + 16 + text_surf.get_width()
         start_x = WINDOW_WIDTH // 2 - total_content_w // 2
+
         for s in range(3):
-            draw_star(surface, (start_x + s * (star_r * 2 + 4) + star_r, star_y),
+            draw_star(surface, (start_x + s * (star_r * 2 + 6) + star_r, star_y),
                       star_r, filled=(s < min(3, total_stars)))
         surface.blit(text_surf, text_surf.get_rect(
-            midleft=(start_x + total_w_stars + 8, star_y)
+            midleft=(start_x + total_w_stars + 16, star_y)
         ))
 
-    def _draw_tile(self, surface: pygame.Surface, idx: int, rect: pygame.Rect) -> None:
-        level_num = idx + 1
+    def _draw_tile(self, surface: pygame.Surface, slot_idx: int, level_num: int, rect: pygame.Rect) -> None:
         save = self.game.save_data
-        level_data = save["levels"].get(str(level_num), {"stars": 0, "solved": False})
+        level_data = save.get("levels", {}).get(str(level_num), {"stars": 0, "solved": False})
         stars = level_data.get("stars", 0)
-        solved = level_data.get("solved", False)
         unlocked = self._is_unlocked(level_num)
 
         # Einblend-Skalierung
-        scale = self._tile_tweens[idx].value
+        scale = self._tile_tweens[slot_idx].value
         if scale < 0.01:
             return
         cx, cy = rect.center
@@ -147,54 +211,55 @@ class LevelSelectScene(BaseScene):
 
         # Farbe
         if not unlocked:
-            color = (190, 185, 180)
-        elif self._hovered == idx:
-            base = _LEVEL_COLORS[idx % len(_LEVEL_COLORS)]
-            color = tuple(min(255, c + 20) for c in base)
+            color = (195, 190, 185)
+        elif self._hovered == slot_idx:
+            base = _LEVEL_COLORS[(level_num - 1) % len(_LEVEL_COLORS)]
+            color = tuple(min(255, c + 25) for c in base)
         else:
-            color = _LEVEL_COLORS[idx % len(_LEVEL_COLORS)]
+            color = _LEVEL_COLORS[(level_num - 1) % len(_LEVEL_COLORS)]
 
-        draw_rounded_rect(surface, color, scaled_rect, radius=18, shadow_offset=5)
+        draw_rounded_rect(surface, color, scaled_rect, radius=24, shadow_offset=6)
 
         if not unlocked:
-            # Schloss-Symbol (gezeichnet)
-            _draw_lock(surface, cx, cy - 8, (160, 155, 150))
-            font_sm = get_font(FONT_SIZE_XS)
-            lock_label = font_sm.render(f"Level {level_num}", True, (160, 155, 150))
-            surface.blit(lock_label, lock_label.get_rect(center=(cx, cy + 26)))
+            _draw_lock(surface, cx, cy - 15, (150, 145, 140))
+            font_sm = get_font(FONT_SIZE_SM)
+            lock_label = font_sm.render(f"Level {level_num}", True, (145, 140, 135))
+            surface.blit(lock_label, lock_label.get_rect(center=(cx, cy + 36)))
         else:
             # Level-Nummer
-            font_num = get_font(FONT_SIZE_MD + 6, bold=True)
+            font_num = get_font(FONT_SIZE_LG, bold=True)
             num_surf = font_num.render(str(level_num), True, COLOR_WHITE)
-            surface.blit(num_surf, num_surf.get_rect(center=(cx, cy - 14)))
+            surface.blit(num_surf, num_surf.get_rect(center=(cx, cy - 25)))
 
-            # Sterne (klein)
-            star_r = 9
+            # Sterne (3 Stück)
+            star_r = 16
+            spacing = star_r * 2 + 10
+            start_star_x = cx - spacing
             for s in range(3):
-                sx = cx - 18 + s * 18
-                draw_star(surface, (sx, cy + 22), star_r, filled=(s < stars))
+                sx = start_star_x + s * spacing
+                draw_star(surface, (sx, cy + 35), star_r, filled=(s < stars))
 
     def _calc_tile_rects(self) -> list[pygame.Rect]:
-        """Berechnet die Positionen der Kacheln in einem Grid."""
+        """Berechnet 10 Kacheln in einem 5×2-Grid für 1920x1080."""
         rects = []
-        cols, rows = 4, 2
-        tile_w, tile_h = 150, 110
+        cols, rows = 5, 2
+        tile_w, tile_h = 280, 210
         pad_x = (WINDOW_WIDTH - cols * tile_w) // (cols + 1)
+        start_y = 200
         pad_y = 50
-        start_y = 105
         for row in range(rows):
             for col in range(cols):
                 x = pad_x + col * (tile_w + pad_x)
                 y = start_y + row * (tile_h + pad_y)
                 rects.append(pygame.Rect(x, y, tile_w, tile_h))
-        return rects[:TOTAL_LEVELS]
+        return rects
 
     def _is_unlocked(self, level: int) -> bool:
-        """Level 1 ist immer frei; folgende werden nach Lösung des Vorgängers freigeschaltet."""
+        """Level 1 ist immer frei; folgende nach Lösung des Vorgängers."""
         if level == 1:
             return True
         save = self.game.save_data
-        prev = save["levels"].get(str(level - 1), {})
+        prev = save.get("levels", {}).get(str(level - 1), {})
         return prev.get("solved", False)
 
     def _start_level(self, level: int) -> None:

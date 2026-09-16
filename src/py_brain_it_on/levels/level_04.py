@@ -1,9 +1,9 @@
 """
-Level 4 — Zwei Baelle
+Level 4 — Zwei Bälle
 
-Zwei Baelle an verschiedenen Positionen.
-Beide muessen in denselben Eimer.
-Ziel: Eine Y-Form oder zwei Rampen zeichnen.
+Zwei Bälle an gegenüberliegenden Seiten.
+Beide müssen in denselben zentralen Eimer gelangen.
+Ziel: Eine Y-Form oder zwei koordinierte Rampen zeichnen.
 """
 from __future__ import annotations
 
@@ -14,24 +14,27 @@ from ..settings import COLOR_CORAL, COLOR_TEAL, COLOR_BLUE, WINDOW_WIDTH, WINDOW
 
 class Level04(BaseLevel):
     LEVEL_NUMBER = 4
-    TITLE = "Zwei Baelle"
-    HINT = "Beide Baelle muessen in den Eimer. Zeichne zwei Rampen oder eine Y-Form."
+    TITLE = "Zwei Bälle"
+    GOAL_DESCRIPTION = "Bringe beide Bälle in den zentralen Eimer!"
+    HINT = "Beide Bälle müssen in den Eimer. Zeichne zwei koordinierte Rampen oder eine große Y-Schale."
     BG_COLOR = (238, 244, 252)
+    STAR_THRESHOLDS = (1, 2)
 
     def setup(self, world: PhysicsWorld) -> None:
         W, H = WINDOW_WIDTH, WINDOW_HEIGHT
+        floor_y = H - 90
 
         # Ball 1 oben links
-        world.add_static_segment((40, 200), (180, 200), color=(140, 120, 100), radius=5)
-        world.add_ball((110, 165), color=COLOR_CORAL)
+        world.add_static_segment((120, 380), (450, 380), color=(140, 120, 100), radius=6)
+        world.add_ball((280, 330), color=COLOR_CORAL)
 
         # Ball 2 oben rechts
-        world.add_static_segment((W - 180, 200), (W - 40, 200), color=(140, 120, 100), radius=5)
-        world.add_ball((W - 110, 165), color=COLOR_BLUE)
+        world.add_static_segment((W - 450, 380), (W - 120, 380), color=(140, 120, 100), radius=6)
+        world.add_ball((W - 280, 330), color=COLOR_BLUE)
 
-        # Eimer unten Mitte
-        world.add_bucket((W // 2, H - 80), width=90, height=70, color=COLOR_TEAL)
+        # Großer Eimer unten Mitte für beide Bälle
+        world.add_bucket((W // 2, floor_y), width=180, height=120, color=COLOR_TEAL)
 
         # Boden
-        world.add_static_segment((0, H - 80), (W // 2 - 80, H - 80), color=(140, 120, 100), radius=5)
-        world.add_static_segment((W // 2 + 80, H - 80), (W, H - 80), color=(140, 120, 100), radius=5)
+        world.add_static_segment((0, floor_y), (W // 2 - 110, floor_y), color=(140, 120, 100), radius=6)
+        world.add_static_segment((W // 2 + 110, floor_y), (W, floor_y), color=(140, 120, 100), radius=6)

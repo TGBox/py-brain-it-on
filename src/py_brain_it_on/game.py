@@ -23,14 +23,23 @@ class Game:
     def __init__(self) -> None:
         pygame.init()
         pygame.display.set_caption(WINDOW_TITLE)
-        self.screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+        import os
+        is_dummy = os.environ.get("SDL_VIDEODRIVER") == "dummy"
+        flags = pygame.SCALED if is_dummy else (pygame.SCALED | pygame.FULLSCREEN)
+        self.screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT), flags)
         self.clock = pygame.time.Clock()
+        self.is_fullscreen = not is_dummy
 
         # Szenenstapel (LIFO)
         self.scene_stack: list[BaseScene] = []
 
         # Spielfortschritt
         self.save_data = save_manager.load()
+
+    def toggle_fullscreen(self) -> None:
+        """Schaltet zwischen Vollbild und Fenstermodus um."""
+        pygame.display.toggle_fullscreen()
+        self.is_fullscreen = not self.is_fullscreen
 
     def push_scene(self, scene: BaseScene) -> None:
         """Legt eine neue Szene auf den Stapel."""
@@ -67,6 +76,9 @@ class Game:
                 if event.type == pygame.QUIT:
                     running = False
                     break
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
+                    self.toggle_fullscreen()
+                    continue
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                     if len(self.scene_stack) > 1:
                         self.pop_scene()
