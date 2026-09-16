@@ -1,52 +1,45 @@
 """
-Level 10 — Dreierlei
+Level 10 — Zwei Bälle
 
-Drei Bälle auf drei verschiedenen Plattformen.
-Alle drei Bälle müssen in den zentralen Eimer befördert werden.
+Zwei Bälle an gegenüberliegenden Seiten.
+Beide müssen in denselben zentralen Eimer gelangen.
+Ziel: Eine Y-Form oder zwei koordinierte Rampen zeichnen.
 """
 from __future__ import annotations
 
 from .base_level import BaseLevel
 from ..physics.world import PhysicsWorld
-from ..settings import (
-    COLOR_CORAL, COLOR_BLUE, COLOR_YELLOW, COLOR_TEAL,
-    WINDOW_WIDTH, WINDOW_HEIGHT,
-)
+from ..settings import COLOR_CORAL, COLOR_TEAL, COLOR_BLUE, WINDOW_WIDTH, WINDOW_HEIGHT
 
 
 class Level10(BaseLevel):
     LEVEL_NUMBER = 10
-    TITLE = "Dreierlei"
-    GOAL_DESCRIPTION = "Bringe alle drei Bälle in den großen Eimer!"
-    HINT = "Zeichne eine breite Trichterschale, die von außen alle drei Bälle zur Mitte leitet."
-    BG_COLOR = (244, 246, 252)
-    STAR_THRESHOLDS = (2, 3)
-    SOLUTION_DESCRIPTION = "Dreifach-Trichter: Zwei Außen-Rampen und ein zentraler Keil führen alle drei Bälle zusammen in den Eimer."
+    TITLE = "Zwei Bälle"
+    GOAL_DESCRIPTION = "Bringe beide Bälle in den zentralen Eimer!"
+    HINT = "Beide Bälle müssen in den Eimer. Zeichne zwei koordinierte Rampen oder eine große Y-Schale."
+    BG_COLOR = (238, 244, 252)
+    STAR_THRESHOLDS = (2, 4)
+    SOLUTION_DESCRIPTION = "Duale Rampen: Zwei koordinierte Rutschen leiten beide Bälle zeitversetzt in den zentralen Eimer."
     SOLUTION_STROKES = [
-        [(240, 220), (300, 310), (900, 780)],
-        [(1680, 220), (1620, 310), (1020, 780)],
-        [(940, 150), (960, 230), (980, 150)]
+        [(220, 260), (280, 370), (880, 800)],
+        [(1700, 310), (1640, 370), (1200, 700), (1030, 800)]
     ]
 
     def setup(self, world: PhysicsWorld) -> None:
         W, H = WINDOW_WIDTH, WINDOW_HEIGHT
         floor_y = H - 90
 
-        # Plattform 1 (links)
-        world.add_static_segment((150, 320), (450, 320), color=(140, 120, 100), radius=6)
-        world.add_ball((300, 270), color=COLOR_CORAL)
+        # Ball 1 oben links
+        world.add_static_segment((120, 380), (450, 380), color=(140, 120, 100), radius=6)
+        world.add_ball((280, 330), color=COLOR_CORAL)
 
-        # Plattform 2 (Mitte hoch)
-        world.add_static_segment((810, 260), (1110, 260), color=(140, 120, 100), radius=6)
-        world.add_ball((960, 210), color=COLOR_BLUE)
+        # Ball 2 oben rechts
+        world.add_static_segment((W - 450, 380), (W - 120, 380), color=(140, 120, 100), radius=6)
+        world.add_ball((W - 280, 330), color=COLOR_BLUE)
 
-        # Plattform 3 (rechts)
-        world.add_static_segment((1470, 320), (1770, 320), color=(140, 120, 100), radius=6)
-        world.add_ball((1620, 270), color=COLOR_YELLOW)
+        # Großer Eimer unten Mitte für beide Bälle
+        world.add_bucket((W // 2, floor_y), width=180, height=120, color=COLOR_TEAL)
 
-        # Großer Sammel-Eimer unten in der Mitte
-        world.add_bucket((W // 2, floor_y), width=240, height=130, color=COLOR_TEAL)
-
-        # Boden links und rechts
-        world.add_static_segment((0, floor_y), (W // 2 - 140, floor_y), color=(140, 120, 100), radius=6)
-        world.add_static_segment((W // 2 + 140, floor_y), (W, floor_y), color=(140, 120, 100), radius=6)
+        # Boden
+        world.add_static_segment((0, floor_y), (W // 2 - 110, floor_y), color=(140, 120, 100), radius=6)
+        world.add_static_segment((W // 2 + 110, floor_y), (W, floor_y), color=(140, 120, 100), radius=6)

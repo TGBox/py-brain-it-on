@@ -1,41 +1,43 @@
 """
-Level 7 — Flipper-Stoß
+Level 7 — Die Schlucht
 
-Der Ball liegt tief in einer Nische gefangen.
-Der Eimer befindet sich erhöht auf einem Podest rechts.
-Ziel: Den Ball mit Wucht aus der Nische nach oben schleudern.
+Ein tiefer Abgrund trennt den linken Bereich vom Zielbereich rechts.
+Der Ball muss die Schlucht überqueren und in den Eimer gelangen.
 """
 from __future__ import annotations
 
 from .base_level import BaseLevel
 from ..physics.world import PhysicsWorld
-from ..settings import COLOR_CORAL, COLOR_TEAL, COLOR_PURPLE, WINDOW_WIDTH, WINDOW_HEIGHT
+from ..settings import COLOR_CORAL, COLOR_TEAL, WINDOW_WIDTH, WINDOW_HEIGHT
 
 
 class Level07(BaseLevel):
     LEVEL_NUMBER = 7
-    TITLE = "Flipper-Stoß"
-    GOAL_DESCRIPTION = "Katapultiere den Ball aus der Nische auf das Podest!"
-    HINT = "Lass ein schweres Objekt oder einen Keil auf den Ball fallen, um ihn herauszukatapultieren."
-    BG_COLOR = (242, 246, 250)
-    STAR_THRESHOLDS = (1, 2)
-    SOLUTION_DESCRIPTION = "Flipper-Katapult: Ein fallendes Gewicht trifft die Wippe und katapultiert den Ball auf das Podest."
+    TITLE = "Die Schlucht"
+    GOAL_DESCRIPTION = "Überquere die Schlucht und erreiche den Eimer!"
+    HINT = "Baue eine tragfähige Brücke über den Abgrund oder katapultiere den Ball hinüber."
+    BG_COLOR = (244, 240, 234)
+    STAR_THRESHOLDS = (1, 3)
+    SOLUTION_DESCRIPTION = "Schlucht-Brücke: Eine lange Brücke von der Klippe über den Abgrund direkt in den Eimer."
     SOLUTION_STROKES = [
-        [(380, 200), (460, 200), (460, 300), (380, 300), (380, 200)]
+        [(240, 390), (290, 455), (600, 490), (1350, 580), (1550, 595)]
     ]
 
     def setup(self, world: PhysicsWorld) -> None:
         W, H = WINDOW_WIDTH, WINDOW_HEIGHT
-        floor_y = H - 90
+        left_cliff_y = 460
+        right_cliff_y = 720
 
-        # Durchgehender Boden
-        world.add_static_segment((0, floor_y), (W, floor_y), color=(140, 120, 100), radius=6)
+        # Linke Klippe (erhöht)
+        world.add_static_segment((0, left_cliff_y), (550, left_cliff_y), color=(130, 115, 95), radius=8)
+        world.add_static_segment((550, left_cliff_y), (550, H), color=(130, 115, 95), radius=8)
 
-        # Flipper-Katapult: Drehpunkt und Wippe
-        world.add_static_segment((600, floor_y), (600, floor_y - 70), color=COLOR_PURPLE, radius=8)
-        world.add_dynamic_box((600, floor_y - 85), width=520, height=22, mass=4.0, color=(160, 110, 70))
-        world.add_ball((780, floor_y - 120), color=COLOR_CORAL)
+        # Ball auf linker Klippe
+        world.add_ball((300, left_cliff_y - 45), color=COLOR_CORAL)
 
-        # Erhöhtes Podest rechts für den Eimer
-        world.add_static_segment((1200, 440), (1500, 440), color=(140, 120, 100), radius=6)
-        world.add_bucket((1350, 440), width=150, height=120, color=COLOR_TEAL)
+        # Rechte Klippe
+        world.add_static_segment((1350, right_cliff_y), (W, right_cliff_y), color=(130, 115, 95), radius=8)
+        world.add_static_segment((1350, right_cliff_y), (1350, H), color=(130, 115, 95), radius=8)
+
+        # Eimer auf rechter Klippe
+        world.add_bucket((1600, right_cliff_y), width=150, height=120, color=COLOR_TEAL)

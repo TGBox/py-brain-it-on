@@ -21,7 +21,7 @@ class Level01(BaseLevel):
     GOAL_DESCRIPTION = "Bringe den Ball in den Eimer!"
     HINT = "Zeichne eine schräge Rampe von der Plattform hinab zum Eimer."
     BG_COLOR = (248, 243, 235)
-    STAR_THRESHOLDS = (1, 2)
+    STAR_THRESHOLDS = (1, 3)
     SOLUTION_DESCRIPTION = "Geschwungene Rutschbahn von der Plattform direkt in den Eimer."
     SOLUTION_STROKES = [
         [(250, 260), (310, 360), (800, 520), (1400, 710), (1540, 750)]

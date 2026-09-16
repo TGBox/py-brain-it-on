@@ -1,8 +1,9 @@
 """
-Level 13 — Präzisionsschuss
+Level 13 — Flipper-Stoß
 
-In der Mitte steht eine massive Wand mit einem schmalen Durchlass.
-Der Ball muss exakt durch diese Öffnung geschossen werden, um den Eimer zu treffen.
+Der Ball liegt tief in einer Nische gefangen.
+Der Eimer befindet sich erhöht auf einem Podest rechts.
+Ziel: Den Ball mit Wucht aus der Nische nach oben schleudern.
 """
 from __future__ import annotations
 
@@ -13,30 +14,28 @@ from ..settings import COLOR_CORAL, COLOR_TEAL, COLOR_PURPLE, WINDOW_WIDTH, WIND
 
 class Level13(BaseLevel):
     LEVEL_NUMBER = 13
-    TITLE = "Präzisionsschuss"
-    GOAL_DESCRIPTION = "Befördere den Ball durch das Fenster in den Eimer!"
-    HINT = "Gib dem Ball auf der Rampe genug Schwung oder zeichne eine Schanze, die genau auf die Öffnung zielt."
-    BG_COLOR = (244, 240, 248)
-    STAR_THRESHOLDS = (1, 2)
-    SOLUTION_DESCRIPTION = "Präzisions-Schanze: Eine Rampe zielt genau durch das Wandfenster direkt in den Eimer."
+    TITLE = "Flipper-Stoß"
+    GOAL_DESCRIPTION = "Katapultiere den Ball aus der Nische auf das Podest!"
+    HINT = "Lass ein schweres Objekt oder einen Keil auf den Ball fallen, um ihn herauszukatapultieren."
+    BG_COLOR = (242, 246, 250)
+    STAR_THRESHOLDS = (1, 3)
+    SOLUTION_DESCRIPTION = "Flipper-Katapult: Ein fallendes Gewicht trifft die Wippe und katapultiert den Ball auf das Podest."
     SOLUTION_STROKES = [
-        [(520, 480), (1050, 620), (1530, 850)]
+        [(410, 300), (480, 300), (480, 370), (410, 370), (410, 300)]
     ]
 
     def setup(self, world: PhysicsWorld) -> None:
         W, H = WINDOW_WIDTH, WINDOW_HEIGHT
         floor_y = H - 90
 
-        # Boden
+        # Durchgehender Boden
         world.add_static_segment((0, floor_y), (W, floor_y), color=(140, 120, 100), radius=6)
 
-        # Anlauf-Rampe links
-        world.add_static_segment((150, 320), (550, 480), color=(140, 120, 100), radius=6)
-        world.add_ball((250, 320), color=COLOR_CORAL)
+        # Flipper-Katapult: Drehpunkt und Wippe
+        world.add_static_segment((600, floor_y), (600, floor_y - 70), color=COLOR_PURPLE, radius=8)
+        world.add_dynamic_box((600, floor_y - 85), width=520, height=22, mass=4.0, color=(160, 110, 70))
+        world.add_ball((780, floor_y - 120), color=COLOR_CORAL)
 
-        # Barriere-Wand mit Tor in der Mitte (x=1050)
-        world.add_static_segment((1050, 100), (1050, 520), color=COLOR_PURPLE, radius=10)
-        world.add_static_segment((1050, 720), (1050, floor_y), color=COLOR_PURPLE, radius=10)
-
-        # Eimer rechts
-        world.add_bucket((1600, floor_y), width=160, height=120, color=COLOR_TEAL)
+        # Erhöhtes Podest rechts für den Eimer
+        world.add_static_segment((1200, 440), (1500, 440), color=(140, 120, 100), radius=6)
+        world.add_bucket((1350, 440), width=150, height=120, color=COLOR_TEAL)

@@ -1,42 +1,44 @@
 """
-Level 2 — Bogenbrücke
+Level 2 — Turmsturz
 
-Ball liegt links. Eine hohe Wand steht in der Mitte.
-Eimer steht rechts auf dem Boden.
-Ziel: Den Ball über die Wand hebeln, rollen oder katapultieren.
+Eine hohe, schlanke Säule balanciert auf einem Podest in der Mitte.
+Kein Eimer — das Ziel ist rein physikalische Zerstörungskraft!
+Ziel: Bringe die rote Säule zum Umkippen!
 """
 from __future__ import annotations
 
 from .base_level import BaseLevel
 from ..physics.world import PhysicsWorld
-from ..settings import COLOR_CORAL, COLOR_TEAL, COLOR_ORANGE, WINDOW_WIDTH, WINDOW_HEIGHT
+from ..settings import WINDOW_WIDTH, WINDOW_HEIGHT
 
 
 class Level02(BaseLevel):
     LEVEL_NUMBER = 2
-    TITLE = "Bogenbrücke"
-    GOAL_DESCRIPTION = "Befördere den Ball über die Wand in den Eimer!"
-    HINT = "Nutze einen Hebel oder ein fallendes Gewicht, um den Ball über die Wand zu katapultieren."
-    BG_COLOR = (245, 240, 232)
-    STAR_THRESHOLDS = (1, 2)
-    SOLUTION_DESCRIPTION = "Bogenbrücke: Ein einzelner geschwungener Bogen von der Plattform über die Mauer in den Eimer."
+    TITLE = "Turmsturz"
+    GOAL_DESCRIPTION = "Bringe die rote Säule zum Umstürzen!"
+    HINT = "Lass ein schweres Gewicht von oben seitlich gegen die Säule krachen oder baue einen massiven Pendelarm."
+    BG_COLOR = (248, 240, 236)
+    STAR_THRESHOLDS = (1, 3)
+    SOLUTION_DESCRIPTION = "Ein schwerer fallender Block links der Säulenspitze bringt den Turm augenblicklich zum Einsturz."
     SOLUTION_STROKES = [
-        [(240, 380), (280, 470), (600, 500), (960, 525), (1300, 680), (1530, 850)]
+        [(880, 150), (940, 150), (940, 300), (880, 300), (880, 150)]
     ]
 
     def setup(self, world: PhysicsWorld) -> None:
         W, H = WINDOW_WIDTH, WINDOW_HEIGHT
         floor_y = H - 90
 
-        # Durchgehender Boden
+        # Boden
         world.add_static_segment((0, floor_y), (W, floor_y), color=(140, 120, 100), radius=6)
 
-        # Ball-Plattform links
-        world.add_static_segment((120, 480), (450, 480), color=(140, 120, 100), radius=6)
-        world.add_ball((280, 430), color=COLOR_CORAL)
+        # Sockel für die Säule
+        world.add_static_segment((800, 880), (1120, 880), color=(140, 120, 100), radius=8)
 
-        # Hindernis-Wand in der Mitte
-        world.add_static_segment((960, floor_y), (960, 540), color=COLOR_ORANGE, radius=10)
+        # Schlanke, hohe Säule (Höhe 360px)
+        world.add_dynamic_pillar((960, 700), width=45, height=360, mass=3.0, color=(225, 95, 60))
 
-        # Eimer rechts
-        world.add_bucket((1550, floor_y), width=160, height=120, color=COLOR_TEAL)
+    def check_victory(self, world: PhysicsWorld, dt: float = 0.0) -> bool:
+        if not world.dynamic_boxes:
+            return False
+        pillar = world.dynamic_boxes[0]
+        return pillar.is_toppled

@@ -112,9 +112,23 @@ class DrawingManager:
         if len(self._raw_points) < 2:
             self._raw_points = []
             return None
+        # Wenn Start und Ende sehr nah beieinander liegen (< 18px) und genügend Punkte da sind, schließen
+        if len(self._raw_points) >= 4:
+            p_start = self._raw_points[0]
+            p_end = self._raw_points[-1]
+            if math.hypot(p_start[0] - p_end[0], p_start[1] - p_end[1]) <= 18.0:
+                self._raw_points[-1] = p_start
+
         simplified = douglas_peucker(self._raw_points, DRAW_SIMPLIFY_TOLERANCE)
         self._raw_points = []
         return simplified if len(simplified) >= 2 else None
+
+    def close_and_finish(self) -> list[tuple[float, float]] | None:
+        """Schließt die aktuelle Kontur explizit zum Startpunkt ab und gibt sie als geschlossenen Pfad zurück."""
+        if not self._drawing or len(self._raw_points) < 3:
+            return self.finish()
+        self._raw_points.append(self._raw_points[0])
+        return self.finish()
 
     def cancel(self) -> None:
         """Bricht den aktuellen Strich ab."""

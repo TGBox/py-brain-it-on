@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 import pymunk
+import pymunk.autogeometry
 import pygame
 
 from ..settings import (
@@ -42,12 +43,14 @@ class BallState:
 
 @dataclass
 class DrawnStroke:
-    """Eine vom Spieler gezeichnete Linie als Physik-Segmente."""
+    """Eine vom Spieler gezeichnete Linie oder ein geschlossener Block als Physik-Segmente/Polygone."""
     points: list[tuple[float, float]]          # Rohpunkte
     segments: list[pymunk.Segment] = field(default_factory=list)
+    poly_shapes: list[pymunk.Poly] = field(default_factory=list)
     body: Optional[pymunk.Body] = None
     color: tuple = (80, 70, 65)
     is_static: bool = False
+    is_closed: bool = False
     connection_points: list[tuple[float, float]] = field(default_factory=list)
 
 
@@ -317,8 +320,72 @@ class PhysicsWorld:
         return contact_pts
 
     @staticmethod
+    def _compute_polygon_centroid(verts: list[tuple[float, float]]) -> pymunk.Vec2d:
+        """Berechnet den Schwerpunkt eines Polygons."""
+        n = len(verts)
+        if n == 0:
+            return pymunk.Vec2d(0, 0)
+        cx, cy, signed_area = 0.0, 0.0, 0.0
+        for i in range(n):
+            x0, y0 = verts[i]
+            x1, y1 = verts[(i + 1) % n]
+            a = x0 * y1 - x1 * y0
+            signed_area += a
+            cx += (x0 + x1) * a
+            cy += (y0 + y1) * a
+        signed_area *= 0.5
+        if abs(signed_area) < 1e-4:
+            return pymunk.Vec2d(sum(v[0] for v in verts) / n, sum(v[1] for v in verts) / n)
+        return pymunk.Vec2d(cx / (6.0 * signed_area), cy / (6.0 * signed_area))
+
+    @staticmethod
     def _compute_stroke_physics(points: list[tuple[float, float]], radius: float = SEGMENT_RADIUS):
-        """Berechnet Schwerpunkt, Masse und Trägheitsmoment für dynamische Striche."""
+        """
+        Berechnet Schwerpunkt, Masse und Trägheitsmoment.
+        Erkennt geschlossene Formen (Start ~ Ende) und berechnet flächenbasierte Masse
+        inklusive konvexer Polygon-Zerlegung. Offene Formen erhalten längenbasierte Masse.
+        """
+        is_closed = False
+        local_polys: list[list[pymunk.Vec2d]] = []
+        closed_pts = list(points)
+
+        if len(points) >= 4:
+            d_ends = pymunk.Vec2d(*points[0]).get_distance(pymunk.Vec2d(*points[-1]))
+            if d_ends <= 24.0 or points[0] == points[-1]:
+                closed_pts[-1] = closed_pts[0]
+                verts = [pymunk.Vec2d(*p) for p in closed_pts[:-1]]
+                signed_area = pymunk.area_for_poly(verts)
+                area = abs(signed_area)
+                if area >= 90.0:
+                    if signed_area < 0:
+                        closed_pts = list(reversed(closed_pts))
+                        verts = [pymunk.Vec2d(*p) for p in closed_pts[:-1]]
+                    try:
+                        decomp = pymunk.autogeometry.convex_decomposition(closed_pts, 1.5)
+                        if decomp:
+                            com = PhysicsWorld._compute_polygon_centroid([(v.x, v.y) for v in verts])
+                            # Flächenbasierte Masse: Dichte ~0.0022 kg/px²
+                            mass = max(3.5, area * 0.0022)
+                            total_moment = 0.0
+                            for piece in decomp:
+                                raw_piece = piece[:-1] if piece[0] == piece[-1] else piece
+                                local_piece = [p - com for p in raw_piece]
+                                if pymunk.area_for_poly(local_piece) < 0:
+                                    local_piece = list(reversed(local_piece))
+                                p_area = abs(pymunk.area_for_poly(local_piece))
+                                p_mass = mass * (p_area / area) if area > 0 else mass
+                                total_moment += pymunk.moment_for_poly(p_mass, local_piece)
+                                local_polys.append(local_piece)
+                            total_moment = max(40.0, total_moment)
+                            is_closed = True
+                    except Exception:
+                        is_closed = False
+
+        if is_closed and local_polys:
+            local_segments = []
+            return com, mass, total_moment, local_segments, True, local_polys
+
+        # Offene Linie: Masse proportional zur Gesamtlänge
         seg_lengths = []
         total_length = 0.0
         for i in range(len(points) - 1):
@@ -339,9 +406,7 @@ class PhysicsWorld:
             com += (p1 + p2) * 0.5 * seg_lengths[i]
         com = com / total_length
 
-        # Dichte: ca. 0.025 kg/px, Mindestmasse 0.8 kg
         mass = max(0.8, total_length * 0.025)
-
         total_moment = 0.0
         local_segments = []
         for i in range(len(points) - 1):
@@ -353,58 +418,86 @@ class PhysicsWorld:
             local_segments.append((p1_local, p2_local))
 
         total_moment = max(20.0, total_moment)
-        return com, mass, total_moment, local_segments
+        return com, mass, total_moment, local_segments, False, []
 
     def add_drawn_stroke(self, points: list[tuple[float, float]], color: tuple = (80, 70, 65)) -> DrawnStroke:
         """
-        Fügt eine gezeichnete Polyline in die Physikwelt ein.
-        Berührt die Form statische Oberflächen (Plattformen, Wände, Boden, Eimer),
-        wird sie als statischer Körper verankert und erhält sichtbare Verbindungspunkte.
+        Fügt eine gezeichnete Form (Polyline oder Block) in die Physikwelt ein.
+        Berührt die Form statische Oberflächen, wird sie als statischer Körper verankert.
         Andernfalls wird sie zu einem dynamischen Physikobjekt.
+        Geschlossene Formen werden als massive Polygone mit flächenbasierter Masse erzeugt.
         """
         if len(points) < 2:
             return DrawnStroke(points=points, color=color)
 
         conn_pts = self.find_connection_points(points, threshold=16.0)
         is_connected = len(conn_pts) > 0
+        com, mass, moment, local_segs, is_closed, local_polys = self._compute_stroke_physics(points)
 
         if is_connected:
             body = pymunk.Body(body_type=pymunk.Body.STATIC)
             segments = []
-            for i in range(len(points) - 1):
-                seg = pymunk.Segment(body, points[i], points[i + 1], SEGMENT_RADIUS)
-                seg.elasticity = WALL_ELASTICITY
-                seg.friction = WALL_FRICTION
-                seg.collision_type = CTYPE_DRAWN
-                segments.append(seg)
-            self.space.add(body, *segments)
-            self._level_static_shapes.extend(segments)
+            polys = []
+            if is_closed and local_polys:
+                for piece in local_polys:
+                    world_piece = [p + com for p in piece]
+                    poly = pymunk.Poly(body, world_piece)
+                    poly.elasticity = WALL_ELASTICITY
+                    poly.friction = WALL_FRICTION
+                    poly.collision_type = CTYPE_DRAWN
+                    polys.append(poly)
+                self.space.add(body, *polys)
+                self._level_static_shapes.extend(polys)
+            else:
+                for i in range(len(points) - 1):
+                    seg = pymunk.Segment(body, points[i], points[i + 1], SEGMENT_RADIUS)
+                    seg.elasticity = WALL_ELASTICITY
+                    seg.friction = WALL_FRICTION
+                    seg.collision_type = CTYPE_DRAWN
+                    segments.append(seg)
+                self.space.add(body, *segments)
+                self._level_static_shapes.extend(segments)
+
             stroke = DrawnStroke(
                 points=points,
                 segments=segments,
+                poly_shapes=polys,
                 body=body,
                 color=color,
                 is_static=True,
+                is_closed=is_closed,
                 connection_points=conn_pts,
             )
         else:
-            com, mass, moment, local_segs = self._compute_stroke_physics(points)
             body = pymunk.Body(mass, moment, body_type=pymunk.Body.DYNAMIC)
             body.position = (com.x, com.y)
             segments = []
-            for p1_local, p2_local in local_segs:
-                seg = pymunk.Segment(body, p1_local, p2_local, SEGMENT_RADIUS)
-                seg.elasticity = 0.35
-                seg.friction = 0.7
-                seg.collision_type = CTYPE_DRAWN
-                segments.append(seg)
-            self.space.add(body, *segments)
+            polys = []
+            if is_closed and local_polys:
+                for piece in local_polys:
+                    poly = pymunk.Poly(body, piece)
+                    poly.elasticity = 0.25
+                    poly.friction = 0.75
+                    poly.collision_type = CTYPE_DRAWN
+                    polys.append(poly)
+                self.space.add(body, *polys)
+            else:
+                for p1_local, p2_local in local_segs:
+                    seg = pymunk.Segment(body, p1_local, p2_local, SEGMENT_RADIUS)
+                    seg.elasticity = 0.35
+                    seg.friction = 0.7
+                    seg.collision_type = CTYPE_DRAWN
+                    segments.append(seg)
+                self.space.add(body, *segments)
+
             stroke = DrawnStroke(
                 points=points,
                 segments=segments,
+                poly_shapes=polys,
                 body=body,
                 color=color,
                 is_static=False,
+                is_closed=is_closed,
                 connection_points=[],
             )
 
@@ -417,11 +510,11 @@ class PhysicsWorld:
             return None
         stroke = self.drawn_strokes.pop()
         if stroke.body:
-            for seg in stroke.segments:
-                if seg in self.space.shapes:
-                    self.space.remove(seg)
-                if seg in self._level_static_shapes:
-                    self._level_static_shapes.remove(seg)
+            for s in stroke.segments + stroke.poly_shapes:
+                if s in self.space.shapes:
+                    self.space.remove(s)
+                if s in self._level_static_shapes:
+                    self._level_static_shapes.remove(s)
             if stroke.body in self.space.bodies:
                 self.space.remove(stroke.body)
         return stroke
@@ -457,39 +550,52 @@ class PhysicsWorld:
     def _convert_stroke_to_dynamic(self, stroke: DrawnStroke) -> None:
         """Wandelt einen statisch verankerten Strich in ein dynamisches Physik-Objekt um."""
         if stroke.body:
-            for seg in stroke.segments:
-                if seg in self.space.shapes:
-                    self.space.remove(seg)
-                if seg in self._level_static_shapes:
-                    self._level_static_shapes.remove(seg)
+            for s in stroke.segments + stroke.poly_shapes:
+                if s in self.space.shapes:
+                    self.space.remove(s)
+                if s in self._level_static_shapes:
+                    self._level_static_shapes.remove(s)
             if stroke.body in self.space.bodies:
                 self.space.remove(stroke.body)
 
-        com, mass, moment, local_segs = self._compute_stroke_physics(stroke.points)
+        com, mass, moment, local_segs, is_closed, local_polys = self._compute_stroke_physics(stroke.points)
         body = pymunk.Body(mass, moment, body_type=pymunk.Body.DYNAMIC)
         body.position = (com.x, com.y)
         segments = []
-        for p1_local, p2_local in local_segs:
-            seg = pymunk.Segment(body, p1_local, p2_local, SEGMENT_RADIUS)
-            seg.elasticity = 0.35
-            seg.friction = 0.7
-            seg.collision_type = CTYPE_DRAWN
-            segments.append(seg)
-        self.space.add(body, *segments)
+        polys = []
+
+        if is_closed and local_polys:
+            for piece in local_polys:
+                poly = pymunk.Poly(body, piece)
+                poly.elasticity = 0.25
+                poly.friction = 0.75
+                poly.collision_type = CTYPE_DRAWN
+                polys.append(poly)
+            self.space.add(body, *polys)
+        else:
+            for p1_local, p2_local in local_segs:
+                seg = pymunk.Segment(body, p1_local, p2_local, SEGMENT_RADIUS)
+                seg.elasticity = 0.35
+                seg.friction = 0.7
+                seg.collision_type = CTYPE_DRAWN
+                segments.append(seg)
+            self.space.add(body, *segments)
 
         stroke.body = body
         stroke.segments = segments
+        stroke.poly_shapes = polys
         stroke.is_static = False
+        stroke.is_closed = is_closed
 
     def remove_drawn_strokes(self) -> None:
         """Entfernt alle vom Spieler gezeichneten Linien."""
         for stroke in self.drawn_strokes:
             if stroke.body:
-                for seg in stroke.segments:
-                    if seg in self.space.shapes:
-                        self.space.remove(seg)
-                    if seg in self._level_static_shapes:
-                        self._level_static_shapes.remove(seg)
+                for s in stroke.segments + stroke.poly_shapes:
+                    if s in self.space.shapes:
+                        self.space.remove(s)
+                    if s in self._level_static_shapes:
+                        self._level_static_shapes.remove(s)
                 if stroke.body in self.space.bodies:
                     self.space.remove(stroke.body)
         self.drawn_strokes.clear()
@@ -547,8 +653,17 @@ class PhysicsWorld:
             elif item_type == "bucket":
                 self._draw_bucket(surface, args, color)
 
-        # Gezeichnete Striche
+        # Gezeichnete Striche & Blöcke
         for stroke in self.drawn_strokes:
+            if stroke.is_closed and stroke.poly_shapes:
+                for poly in stroke.poly_shapes:
+                    verts = [poly.body.local_to_world(v) for v in poly.get_vertices()]
+                    pts = [(int(v.x), int(v.y)) for v in verts]
+                    if len(pts) >= 3:
+                        pygame.draw.polygon(surface, stroke.color, pts)
+                        border_col = tuple(max(0, c - 35) for c in stroke.color)
+                        pygame.draw.polygon(surface, border_col, pts, 3)
+
             for seg in stroke.segments:
                 world_a = seg.body.local_to_world(seg.a)
                 world_b = seg.body.local_to_world(seg.b)

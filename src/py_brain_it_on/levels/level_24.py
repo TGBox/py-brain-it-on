@@ -1,50 +1,45 @@
 """
-Level 24 — Katapult-Meister
+Level 24 — Der Ausbruch
 
-Eine gigantische, 600 Pixel hohe Mauer teilt das Spielfeld.
-Eine vorinstallierte Wippe steht bereit.
-Ziel: Katapultiere den Ball mit maximaler Wucht über die Riesenmauer!
+Der Ball ist in einer tiefen U-förmigen Schale gefangen.
+Der Eimer steht weit entfernt rechts auf dem Boden.
+Ziel: Befreie den Ball aus der Schale und befördere ihn in den Eimer.
 """
 from __future__ import annotations
 
 from .base_level import BaseLevel
 from ..physics.world import PhysicsWorld
-from ..settings import COLOR_CORAL, COLOR_TEAL, COLOR_ORANGE, COLOR_GREEN, WINDOW_WIDTH, WINDOW_HEIGHT
+from ..settings import COLOR_CORAL, COLOR_TEAL, COLOR_PURPLE, WINDOW_WIDTH, WINDOW_HEIGHT
 
 
 class Level24(BaseLevel):
     LEVEL_NUMBER = 24
-    TITLE = "Katapult-Meister"
-    GOAL_DESCRIPTION = "Schleudere den Ball über die Riesenmauer in den Eimer!"
-    HINT = "Lass ein sehr großes, schweres Gewicht aus großer Höhe auf die linke Seite der Wippe knallen."
-    BG_COLOR = (246, 242, 238)
-    STAR_THRESHOLDS = (2, 3)
-    SOLUTION_DESCRIPTION = "Ein Lenkbalken zentriert den Flug und ein massiver Block hämmert auf die Wippe, um den Ball über die Riesenmauer zu schleudern."
+    TITLE = "Der Ausbruch"
+    GOAL_DESCRIPTION = "Befreie den Ball aus der Schale in den Eimer!"
+    HINT = "Zeichne einen Hebel mit einem Haken oder einen schweren Schläger, der in die Schale greift und den Ball herausholt."
+    BG_COLOR = (248, 242, 246)
+    STAR_THRESHOLDS = (2, 4)
+    SOLUTION_DESCRIPTION = "Hebel-Kran: Ein Hakenarm greift in die Schale, ein fallendes Gewicht zieht den Ball heraus und schleudert ihn in den Eimer."
     SOLUTION_STROKES = [
-        [(720, 180), (840, 260)],
-        [(200, 30), (340, 30), (340, 210), (200, 210), (200, 30), (340, 120), (200, 120)]
+        [(930, 640), (980, 640), (1110, 530), (1420, 560)],
+        [(1350, 120), (1400, 120), (1400, 200), (1350, 200), (1350, 120)]
     ]
+
 
     def setup(self, world: PhysicsWorld) -> None:
         W, H = WINDOW_WIDTH, WINDOW_HEIGHT
         floor_y = H - 90
 
-        # Boden
+        # Durchgehender Boden
         world.add_static_segment((0, floor_y), (W, floor_y), color=(140, 120, 100), radius=6)
 
-        # Riesenmauer in der Mitte (x = 960)
-        world.add_static_segment((960, floor_y), (960, 380), color=COLOR_ORANGE, radius=12)
+        # U-förmige Gefängnisschale
+        world.add_static_segment((800, 680), (1120, 680), color=COLOR_PURPLE, radius=8)
+        world.add_static_segment((800, 680), (800, 560), color=COLOR_PURPLE, radius=8)
+        world.add_static_segment((1120, 680), (1120, 560), color=COLOR_PURPLE, radius=8)
 
-        # Drehpunkt links für die Wippe
-        world.add_static_segment((500, floor_y), (480, floor_y - 90), color=COLOR_GREEN, radius=8)
-        world.add_static_segment((500, floor_y), (520, floor_y - 90), color=COLOR_GREEN, radius=8)
-        world.add_static_segment((460, floor_y - 90), (540, floor_y - 90), color=COLOR_GREEN, radius=6)
-
-        # Dynamischer Wippbalken
-        world.add_dynamic_box((500, floor_y - 105), width=540, height=24, mass=4.0, color=(160, 110, 70))
-
-        # Ball auf dem rechten Ende der Wippe
-        world.add_ball((720, floor_y - 140), color=COLOR_CORAL)
+        # Ball in der Schale
+        world.add_ball((960, 630), color=COLOR_CORAL)
 
         # Eimer rechts
-        world.add_bucket((1550, floor_y), width=160, height=120, color=COLOR_TEAL)
+        world.add_bucket((1650, floor_y), width=160, height=120, color=COLOR_TEAL)

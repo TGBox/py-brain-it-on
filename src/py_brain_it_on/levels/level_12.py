@@ -1,45 +1,47 @@
 """
-Level 12 — Das Labyrinth
+Level 12 — Wippen-Transfer
 
-Drei Etagen mit versetzten Durchgängen.
-Der Ball muss geschickt von Etage zu Etage nach unten manövriert werden.
+Eine vorinstallierte Holzwippe balanciert in der Mitte des Spielfelds.
+Der Ball muss auf die Wippe gebracht werden, damit sie kippt und ihn ins Ziel befördert.
 """
 from __future__ import annotations
 
 from .base_level import BaseLevel
 from ..physics.world import PhysicsWorld
-from ..settings import COLOR_CORAL, COLOR_TEAL, COLOR_ORANGE, WINDOW_WIDTH, WINDOW_HEIGHT
+from ..settings import COLOR_CORAL, COLOR_TEAL, COLOR_GREEN, WINDOW_WIDTH, WINDOW_HEIGHT
 
 
 class Level12(BaseLevel):
     LEVEL_NUMBER = 12
-    TITLE = "Das Labyrinth"
-    GOAL_DESCRIPTION = "Führe den Ball durch alle Etagen bis zum Eimer!"
-    HINT = "Nutze kurze schräge Rampen an den Lücken, um den Ball gezielt auf die nächste Ebene zu leiten."
-    BG_COLOR = (248, 244, 238)
-    STAR_THRESHOLDS = (3, 4)
-    SOLUTION_DESCRIPTION = "Drei präzise Umlenkbögen führen den Ball sicher durch die drei Etagen des Labyrinths direkt in den Ziel-Eimer."
+    TITLE = "Wippen-Transfer"
+    GOAL_DESCRIPTION = "Nutze die Wippe, um den Ball zum Eimer zu befördern!"
+    HINT = "Leite den Ball auf die linke Seite der Wippe oder beschwere die rechte Seite mit einem Gewicht."
+    BG_COLOR = (244, 248, 240)
+    STAR_THRESHOLDS = (2, 4)
+    SOLUTION_DESCRIPTION = "Wippen-Transfer: Eine Rutsche leitet den Ball auf die Wippe, die nach rechts kippt und den Ball über die Auffangrampe in den Eimer rollen lässt."
     SOLUTION_STROKES = [
-        [(800, 400), (950, 440), (920, 510)],
-        [(400, 620), (280, 660), (320, 730)],
-        [(1000, 820), (1150, 850), (1250, 860)]
+        [(240, 290), (320, 360), (550, 520), (740, 580)],
+        [(1180, 650), (1350, 750), (1550, 880)]
     ]
 
     def setup(self, world: PhysicsWorld) -> None:
         W, H = WINDOW_WIDTH, WINDOW_HEIGHT
         floor_y = H - 90
 
-        # Etage 1 (sanft nach rechts geneigt)
-        world.add_static_segment((150, 300), (850, 420), color=(140, 120, 100), radius=6)
-        world.add_ball((250, 260), color=COLOR_CORAL)
-
-        # Etage 2 (sanft nach links geneigt)
-        world.add_static_segment((1050, 500), (350, 640), color=COLOR_ORANGE, radius=6)
-
-        # Etage 3 (sanft nach rechts geneigt)
-        world.add_static_segment((250, 720), (1050, 840), color=(140, 120, 100), radius=6)
-
-        # Boden und Eimer unten rechts
+        # Boden
         world.add_static_segment((0, floor_y), (W, floor_y), color=(140, 120, 100), radius=6)
-        world.add_bucket((1250, floor_y), width=180, height=120, color=COLOR_TEAL)
 
+        # Start-Podest links oben
+        world.add_static_segment((120, 320), (420, 320), color=(140, 120, 100), radius=6)
+        world.add_ball((270, 270), color=COLOR_CORAL)
+
+        # Drehpunkt / Stütze für die Wippe
+        world.add_static_segment((960, 640), (940, 680), color=COLOR_GREEN, radius=8)
+        world.add_static_segment((960, 640), (980, 680), color=COLOR_GREEN, radius=8)
+        world.add_static_segment((930, 680), (990, 680), color=COLOR_GREEN, radius=6)
+
+        # Balancierender Wippbalken
+        world.add_dynamic_box((960, 625), width=520, height=22, mass=4.0, color=(160, 110, 70))
+
+        # Eimer unten rechts
+        world.add_bucket((1600, floor_y), width=160, height=120, color=COLOR_TEAL)

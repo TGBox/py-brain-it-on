@@ -1,9 +1,9 @@
 """
-Level 17 — Der Ausbruch
+Level 17 — Hoch hinaus
 
-Der Ball ist in einer tiefen U-förmigen Schale gefangen.
-Der Eimer steht weit entfernt rechts auf dem Boden.
-Ziel: Befreie den Ball aus der Schale und befördere ihn in den Eimer.
+Der Ball liegt unten auf dem Boden.
+Der Eimer befindet sich auf einem hohen Pfeiler hoch in der Luft!
+Ziel: Den Ball nach oben auf den Pfeiler katapultieren.
 """
 from __future__ import annotations
 
@@ -14,17 +14,15 @@ from ..settings import COLOR_CORAL, COLOR_TEAL, COLOR_PURPLE, WINDOW_WIDTH, WIND
 
 class Level17(BaseLevel):
     LEVEL_NUMBER = 17
-    TITLE = "Der Ausbruch"
-    GOAL_DESCRIPTION = "Befreie den Ball aus der Schale in den Eimer!"
-    HINT = "Zeichne einen Hebel mit einem Haken oder einen schweren Schläger, der in die Schale greift und den Ball herausholt."
-    BG_COLOR = (248, 242, 246)
-    STAR_THRESHOLDS = (2, 3)
-    SOLUTION_DESCRIPTION = "Hebel-Kran: Ein Hakenarm greift in die Schale, ein fallendes Gewicht zieht den Ball heraus und schleudert ihn in den Eimer."
+    TITLE = "Hoch hinaus"
+    GOAL_DESCRIPTION = "Katapultiere den Ball nach oben auf den Pfeiler!"
+    HINT = "Baue eine Wippe und lass ein massives Gewicht auf das andere Ende sausen."
+    BG_COLOR = (246, 240, 248)
+    STAR_THRESHOLDS = (1, 3)
+    SOLUTION_DESCRIPTION = "Katapult-Stoß: Ein schweres Gewicht saust auf die Wippe und schleudert den Ball hoch auf den Pfeiler."
     SOLUTION_STROKES = [
-        [(930, 640), (980, 640), (1110, 530), (1420, 560)],
-        [(1350, 100), (1430, 100), (1430, 250), (1350, 250), (1350, 100)]
+        [(410, 300), (480, 300), (480, 370), (410, 370), (410, 300)]
     ]
-
 
     def setup(self, world: PhysicsWorld) -> None:
         W, H = WINDOW_WIDTH, WINDOW_HEIGHT
@@ -33,13 +31,14 @@ class Level17(BaseLevel):
         # Durchgehender Boden
         world.add_static_segment((0, floor_y), (W, floor_y), color=(140, 120, 100), radius=6)
 
-        # U-förmige Gefängnisschale
-        world.add_static_segment((800, 680), (1120, 680), color=COLOR_PURPLE, radius=8)
-        world.add_static_segment((800, 680), (800, 560), color=COLOR_PURPLE, radius=8)
-        world.add_static_segment((1120, 680), (1120, 560), color=COLOR_PURPLE, radius=8)
+        # Wippe links für Katapult
+        world.add_static_segment((600, floor_y), (600, floor_y - 70), color=COLOR_PURPLE, radius=8)
+        world.add_dynamic_box((600, floor_y - 85), width=520, height=22, mass=4.0, color=(160, 110, 70))
+        world.add_ball((780, floor_y - 120), color=COLOR_CORAL)
 
-        # Ball in der Schale
-        world.add_ball((960, 630), color=COLOR_CORAL)
+        # Hoher Pfeiler rechts
+        world.add_static_segment((1350, floor_y), (1350, 440), color=COLOR_PURPLE, radius=12)
+        world.add_static_segment((1200, 440), (1500, 440), color=(140, 120, 100), radius=6)
 
-        # Eimer rechts
-        world.add_bucket((1650, floor_y), width=160, height=120, color=COLOR_TEAL)
+        # Eimer auf dem Pfeiler
+        world.add_bucket((1350, 440), width=150, height=120, color=COLOR_TEAL)

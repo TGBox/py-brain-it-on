@@ -1,26 +1,28 @@
 """
-Level 22 — Domino-Effekt
+Level 22 — Katapult-Meister
 
-Zwei Säulen stehen hintereinander aufgereiht.
-Ziel: Bring beide Säulen durch eine Kettenreaktion zum Umstürzen!
+Eine gigantische, 600 Pixel hohe Mauer teilt das Spielfeld.
+Eine vorinstallierte Wippe steht bereit.
+Ziel: Katapultiere den Ball mit maximaler Wucht über die Riesenmauer!
 """
 from __future__ import annotations
 
 from .base_level import BaseLevel
 from ..physics.world import PhysicsWorld
-from ..settings import WINDOW_WIDTH, WINDOW_HEIGHT
+from ..settings import COLOR_CORAL, COLOR_TEAL, COLOR_ORANGE, COLOR_GREEN, WINDOW_WIDTH, WINDOW_HEIGHT
 
 
 class Level22(BaseLevel):
     LEVEL_NUMBER = 22
-    TITLE = "Domino-Effekt"
-    GOAL_DESCRIPTION = "Bringe beide Säulen zum Umstürzen!"
-    HINT = "Kippe die erste rote Säule nach rechts, damit sie die blaue Säule mitreißt."
-    BG_COLOR = (248, 244, 240)
-    STAR_THRESHOLDS = (1, 2)
-    SOLUTION_DESCRIPTION = "Ein herabstürzendes Gewicht bringt die rote Säule zum Kippen, die wiederum wie ein Domino die blaue Säule umwirft."
+    TITLE = "Katapult-Meister"
+    GOAL_DESCRIPTION = "Schleudere den Ball über die Riesenmauer in den Eimer!"
+    HINT = "Lass ein sehr großes, schweres Gewicht aus großer Höhe auf die linke Seite der Wippe knallen."
+    BG_COLOR = (246, 242, 238)
+    STAR_THRESHOLDS = (2, 4)
+    SOLUTION_DESCRIPTION = "Ein Lenkbalken zentriert den Flug und ein massiver Block hämmert auf die Wippe, um den Ball über die Riesenmauer zu schleudern."
     SOLUTION_STROKES = [
-        [(680, 200), (740, 200), (740, 350), (680, 350), (680, 200)]
+        [(720, 180), (840, 260)],
+        [(200, 30), (340, 30), (340, 210), (200, 210), (200, 30), (340, 120), (200, 120)]
     ]
 
     def setup(self, world: PhysicsWorld) -> None:
@@ -30,13 +32,19 @@ class Level22(BaseLevel):
         # Boden
         world.add_static_segment((0, floor_y), (W, floor_y), color=(140, 120, 100), radius=6)
 
-        # Säule 1 (rot)
-        world.add_dynamic_pillar((750, floor_y - 140), width=40, height=280, mass=3.0, color=(220, 90, 60))
+        # Riesenmauer in der Mitte (x = 960)
+        world.add_static_segment((960, floor_y), (960, 380), color=COLOR_ORANGE, radius=12)
 
-        # Säule 2 (blau)
-        world.add_dynamic_pillar((1000, floor_y - 140), width=40, height=280, mass=3.0, color=(60, 130, 210))
+        # Drehpunkt links für die Wippe
+        world.add_static_segment((500, floor_y), (480, floor_y - 90), color=COLOR_GREEN, radius=8)
+        world.add_static_segment((500, floor_y), (520, floor_y - 90), color=COLOR_GREEN, radius=8)
+        world.add_static_segment((460, floor_y - 90), (540, floor_y - 90), color=COLOR_GREEN, radius=6)
 
-    def check_victory(self, world: PhysicsWorld, dt: float = 0.0) -> bool:
-        if len(world.dynamic_boxes) < 2:
-            return False
-        return all(p.is_toppled for p in world.dynamic_boxes)
+        # Dynamischer Wippbalken
+        world.add_dynamic_box((500, floor_y - 105), width=540, height=24, mass=4.0, color=(160, 110, 70))
+
+        # Ball auf dem rechten Ende der Wippe
+        world.add_ball((720, floor_y - 140), color=COLOR_CORAL)
+
+        # Eimer rechts
+        world.add_bucket((1550, floor_y), width=160, height=120, color=COLOR_TEAL)

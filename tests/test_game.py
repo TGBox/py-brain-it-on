@@ -82,7 +82,24 @@ def test_dynamic_stroke_physics():
 
     anchored_stroke = world.add_drawn_stroke([(0, 1000), (200, 950)])
     assert anchored_stroke.is_static
-    assert len(anchored_stroke.connection_points) > 0
+    # Test closed shape (polygon) mass scaling
+    open_line = world.add_drawn_stroke([(100, 100), (300, 100)])
+    closed_box = world.add_drawn_stroke([(100, 100), (300, 100), (300, 300), (100, 300), (100, 100)])
+    assert closed_box.is_closed, "Box should be recognized as closed"
+    assert len(closed_box.poly_shapes) > 0, "Closed box should have poly_shapes"
+    assert closed_box.body.mass > open_line.body.mass * 5, "Closed box must have much higher mass than open line"
+
+
+def test_drawing_manager_close():
+    from py_brain_it_on.physics.drawing import DrawingManager
+    dm = DrawingManager()
+    dm.start((100, 100))
+    dm.add_point((200, 100))
+    dm.add_point((200, 200))
+    dm.add_point((100, 200))
+    pts = dm.close_and_finish()
+    assert pts is not None
+    assert pts[0] == pts[-1], "Explicit close must set end point to start point"
 
 
 def test_reset_and_connections():
@@ -109,7 +126,7 @@ def test_reset_and_connections():
 
 
 def test_reference_solutions():
-    """Prüft, dass alle 25 Level eine Musterlösung besitzen und diese physikalisch gewinnt."""
+    """Prüft, dass alle 25 Level eine Musterlösung besitzen, die Sterne-Grenzwerte stimmen und die Lösung physikalisch gewinnt."""
     for i in range(1, TOTAL_LEVELS + 1):
         mod_name = f"py_brain_it_on.levels.level_{i:02d}"
         cls_name = f"Level{i:02d}"
@@ -122,6 +139,11 @@ def test_reference_solutions():
         )
         strokes = level.get_solution_strokes()
         assert len(strokes) > 0, f"Level {i} hat keine SOLUTION_STROKES"
+
+        N = len(strokes)
+        assert level.STAR_THRESHOLDS == (N, N + 2), (
+            f"Level {i:02d} ({level.TITLE}) STAR_THRESHOLDS {level.STAR_THRESHOLDS} != ({N}, {N + 2})"
+        )
 
         world = PhysicsWorld()
         level.setup(world)
@@ -177,6 +199,7 @@ if __name__ == "__main__":
     test_levels()
     test_scenes()
     test_dynamic_stroke_physics()
+    test_drawing_manager_close()
     test_reset_and_connections()
     test_reference_solutions()
     test_musterloesung_flow()

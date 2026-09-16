@@ -32,10 +32,11 @@ Zeichne Formen mit der Maus, nutze die Physik-Simulation und bringe den Ball in 
 | Aktion | Eingabe |
 | --- | --- |
 | Form zeichnen | Linksklick + Ziehen |
-| Strich rückgängig | *Rückgängig*-Button |
+| Form als massiven Block schließen | `C`-Taste oder Doppelklick |
+| Strich rückgängig | *Rückgängig*-Button oder `Strg+Z` / `U` |
 | Verbindung lösen | Klick auf rote Niete |
-| Simulation starten | *Starten*-Button |
-| Simulation abbrechen | *Formen anpassen*-Button |
+| Simulation starten | *Starten*-Button oder `Enter` / `Leertaste` |
+| Simulation abbrechen | *Formen anpassen*-Button oder `Z` / `E` |
 | Level-Tipp anzeigen | *Tipp*-Button |
 | Musterlösung ansehen | *Musterlösung*-Button (ab 2 Fehlversuchen) |
 

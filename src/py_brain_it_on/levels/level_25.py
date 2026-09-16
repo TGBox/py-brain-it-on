@@ -18,12 +18,12 @@ class Level25(BaseLevel):
     GOAL_DESCRIPTION = "Stürze die Säule um und versenke beide Bälle im Eimer!"
     HINT = "Bringe die Mittelsäule zum Umfallen und baue zwei Rutschen, die beide Bälle in den Eimer leiten."
     BG_COLOR = (246, 240, 235)
-    STAR_THRESHOLDS = (3, 4)
+    STAR_THRESHOLDS = (3, 5)
     SOLUTION_DESCRIPTION = "Ein herabstürzender Block stürzt die Säule um, während zwei präzise Rutschen beide Bälle zeitgleich in den zentralen Eimer leiten."
     SOLUTION_STROKES = [
         [(585, 100), (650, 100), (650, 250), (585, 250), (585, 100)],
         [(220, 180), (280, 280), (700, 480), (900, 780)],
-        [(1700, 180), (1640, 280), (1350, 520), (1020, 780)]
+        [(1700, 200), (1640, 300), (1400, 560), (1150, 750), (1030, 830)]
     ]
 
     def setup(self, world: PhysicsWorld) -> None:

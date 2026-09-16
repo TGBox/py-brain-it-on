@@ -1,42 +1,52 @@
 """
-Level 20 — Kollision
+Level 20 — Dreierlei
 
-Zwei Bälle an den gegenüberliegenden Seiten des Spielfelds.
-Ziel: Bringe die beiden Bälle dazu, direkt miteinander zu kollidieren!
+Drei Bälle auf drei verschiedenen Plattformen.
+Alle drei Bälle müssen in den zentralen Eimer befördert werden.
 """
 from __future__ import annotations
 
 from .base_level import BaseLevel
 from ..physics.world import PhysicsWorld
-from ..settings import COLOR_CORAL, COLOR_BLUE, WINDOW_WIDTH, WINDOW_HEIGHT
+from ..settings import (
+    COLOR_CORAL, COLOR_BLUE, COLOR_YELLOW, COLOR_TEAL,
+    WINDOW_WIDTH, WINDOW_HEIGHT,
+)
 
 
 class Level20(BaseLevel):
     LEVEL_NUMBER = 20
-    TITLE = "Kollision"
-    GOAL_DESCRIPTION = "Bringe die beiden Bälle zum Zusammenstoß!"
-    HINT = "Zeichne Rampen, die beide Bälle zur gleichen Zeit in die Mitte aufeinander zu rasen lassen."
-    BG_COLOR = (240, 244, 252)
-    STAR_THRESHOLDS = (1, 2)
-    SOLUTION_DESCRIPTION = "Eine geschwungene Brücke verbindet beide Rampenenden und führt die Bälle zum frontalen Zusammenstoß."
+    TITLE = "Dreierlei"
+    GOAL_DESCRIPTION = "Bringe alle drei Bälle in den großen Eimer!"
+    HINT = "Zeichne eine breite Trichterschale, die von außen alle drei Bälle zur Mitte leitet."
+    BG_COLOR = (244, 246, 252)
+    STAR_THRESHOLDS = (3, 5)
+    SOLUTION_DESCRIPTION = "Dreifach-Trichter: Zwei Außen-Rampen und ein zentraler Keil führen alle drei Bälle zusammen in den Eimer."
     SOLUTION_STROKES = [
-        [(530, 580), (960, 620), (1390, 580)]
+        [(240, 220), (300, 310), (900, 780)],
+        [(1680, 220), (1620, 310), (1020, 780)],
+        [(940, 150), (960, 230), (980, 150)]
     ]
 
     def setup(self, world: PhysicsWorld) -> None:
         W, H = WINDOW_WIDTH, WINDOW_HEIGHT
         floor_y = H - 90
 
-        # Boden
-        world.add_static_segment((0, floor_y), (W, floor_y), color=(140, 120, 100), radius=6)
+        # Plattform 1 (links)
+        world.add_static_segment((150, 320), (450, 320), color=(140, 120, 100), radius=6)
+        world.add_ball((300, 270), color=COLOR_CORAL)
 
-        # Rampe links
-        world.add_static_segment((120, 350), (550, 580), color=(140, 120, 100), radius=6)
-        world.add_ball((250, 360), color=COLOR_CORAL)
+        # Plattform 2 (Mitte hoch)
+        world.add_static_segment((810, 260), (1110, 260), color=(140, 120, 100), radius=6)
+        world.add_ball((960, 210), color=COLOR_BLUE)
 
-        # Rampe rechts
-        world.add_static_segment((W - 120, 350), (W - 550, 580), color=(140, 120, 100), radius=6)
-        world.add_ball((W - 250, 360), color=COLOR_BLUE)
+        # Plattform 3 (rechts)
+        world.add_static_segment((1470, 320), (1770, 320), color=(140, 120, 100), radius=6)
+        world.add_ball((1620, 270), color=COLOR_YELLOW)
 
-    def check_victory(self, world: PhysicsWorld, dt: float = 0.0) -> bool:
-        return world.balls_collided
+        # Großer Sammel-Eimer unten in der Mitte
+        world.add_bucket((W // 2, floor_y), width=240, height=130, color=COLOR_TEAL)
+
+        # Boden links und rechts
+        world.add_static_segment((0, floor_y), (W // 2 - 140, floor_y), color=(140, 120, 100), radius=6)
+        world.add_static_segment((W // 2 + 140, floor_y), (W, floor_y), color=(140, 120, 100), radius=6)

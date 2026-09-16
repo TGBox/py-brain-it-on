@@ -74,6 +74,8 @@ class PlayScene(BaseScene):
         self._fail_timer = 0.0
         self._snapshot_strokes: list[dict] = []
         self._hovered_conn_point: tuple[float, float] | None = None
+        self._last_click_time: float = 0.0
+        self._last_click_pos: tuple[int, int] = (0, 0)
 
         # Animationen
         self._success_tween = Tween(0, 1, 0.5, ease_out_bounce)
@@ -235,7 +237,13 @@ class PlayScene(BaseScene):
                 elif event.key in (pygame.K_m, pygame.K_l) and self._failed_attempts >= 2:
                     self._on_request_solution()
                     return
-
+                elif event.key == pygame.K_c:
+                    if self._drawing.is_drawing:
+                        pts = self._drawing.close_and_finish()
+                        if pts:
+                            self._world.add_drawn_stroke(pts, color=(65, 58, 50))
+                            self._stroke_count += 1
+                        return
 
             # Zeichnen oder Verbindungspunkt lösen (nur im Spielbereich)
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -243,6 +251,21 @@ class PlayScene(BaseScene):
                     # Verbindungspunkt lösen bei Klick darauf
                     if self._world.remove_connection_point_at(event.pos, threshold=24.0):
                         return
+
+                    # Doppelklick schließt und beendet die aktuelle Kontur als massiven Block
+                    now = pygame.time.get_ticks() / 1000.0
+                    dist_last = math.hypot(event.pos[0] - self._last_click_pos[0], event.pos[1] - self._last_click_pos[1])
+                    is_double_click = (now - self._last_click_time < 0.35) and (dist_last < 25.0)
+                    self._last_click_time = now
+                    self._last_click_pos = event.pos
+
+                    if is_double_click and self._drawing.is_drawing:
+                        pts = self._drawing.close_and_finish()
+                        if pts:
+                            self._world.add_drawn_stroke(pts, color=(65, 58, 50))
+                            self._stroke_count += 1
+                        return
+
                     self._drawing.start(event.pos)
             elif event.type == pygame.MOUSEMOTION:
                 if self._drawing.is_drawing:
@@ -717,35 +740,18 @@ class PlayScene(BaseScene):
         if not self._snapshot_strokes or not self._world:
             return
 
-        from ..physics.world import DrawnStroke, SEGMENT_RADIUS, WALL_ELASTICITY, WALL_FRICTION, CTYPE_DRAWN
         for stroke_data in self._snapshot_strokes:
             pts = stroke_data["points"]
-            conn_pts = stroke_data["connection_points"]
-            is_static = stroke_data["is_static"]
+            conn_pts = stroke_data.get("connection_points", [])
             color = stroke_data.get("color", (80, 70, 65))
-
-            if is_static and conn_pts:
-                body = pymunk.Body(body_type=pymunk.Body.STATIC)
-                segments = []
-                for i in range(len(pts) - 1):
-                    seg = pymunk.Segment(body, pts[i], pts[i + 1], SEGMENT_RADIUS)
-                    seg.elasticity = WALL_ELASTICITY
-                    seg.friction = WALL_FRICTION
-                    seg.collision_type = CTYPE_DRAWN
-                    segments.append(seg)
-                self._world.space.add(body, *segments)
-                self._world._level_static_shapes.extend(segments)
-                stroke = DrawnStroke(
-                    points=pts,
-                    segments=segments,
-                    body=body,
-                    color=color,
-                    is_static=True,
-                    connection_points=conn_pts,
-                )
-                self._world.drawn_strokes.append(stroke)
-            else:
-                self._world.add_drawn_stroke(pts, color=color)
+            st = self._world.add_drawn_stroke(pts, color=color)
+            if conn_pts and st.is_static:
+                st.connection_points = [
+                    p for p in st.connection_points
+                    if any(pymunk.Vec2d(*p).get_distance(pymunk.Vec2d(*cp)) < 3.0 for cp in conn_pts)
+                ]
+                if not st.connection_points:
+                    self._world._convert_stroke_to_dynamic(st)
 
         self._stroke_count = len(self._world.drawn_strokes)
 

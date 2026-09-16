@@ -18,7 +18,7 @@ class Level09(BaseLevel):
     GOAL_DESCRIPTION = "Nutze das schwere Gewicht, um den Ball in den Eimer zu stoßen!"
     HINT = "Bringe den Kasten oben links mit einer gezeichneten Form zu Fall, damit er auf eine Rampe oder den Ball prallt."
     BG_COLOR = (245, 242, 236)
-    STAR_THRESHOLDS = (1, 2)
+    STAR_THRESHOLDS = (1, 3)
     SOLUTION_DESCRIPTION = "Rollen-Transfer: Eine Rutsche von der Kiste leitet den Ball zielsicher in den Eimer."
     SOLUTION_STROKES = [
         [(880, 520), (940, 610), (1200, 720), (1530, 850)]

@@ -1,46 +1,49 @@
 """
-Level 14 — Wippen-Transfer
+Level 14 — Ball-Duell
 
-Eine vorinstallierte Holzwippe balanciert in der Mitte des Spielfelds.
-Der Ball muss auf die Wippe gebracht werden, damit sie kippt und ihn ins Ziel befördert.
+Zwei Bälle müssen in der Luft oder auf einer Rampe zusammenstoßen,
+und mindestens einer von ihnen muss anschließend im Eimer landen!
 """
 from __future__ import annotations
 
 from .base_level import BaseLevel
 from ..physics.world import PhysicsWorld
-from ..settings import COLOR_CORAL, COLOR_TEAL, COLOR_GREEN, WINDOW_WIDTH, WINDOW_HEIGHT
+from ..settings import COLOR_CORAL, COLOR_BLUE, COLOR_TEAL, WINDOW_WIDTH, WINDOW_HEIGHT
 
 
 class Level14(BaseLevel):
     LEVEL_NUMBER = 14
-    TITLE = "Wippen-Transfer"
-    GOAL_DESCRIPTION = "Nutze die Wippe, um den Ball zum Eimer zu befördern!"
-    HINT = "Leite den Ball auf die linke Seite der Wippe oder beschwere die rechte Seite mit einem Gewicht."
-    BG_COLOR = (244, 248, 240)
-    STAR_THRESHOLDS = (1, 2)
-    SOLUTION_DESCRIPTION = "Direkte Hängebrücke: Eine durchgehende Rutsche über die Wippe hinweg direkt in den Eimer."
+    TITLE = "Ball-Duell"
+    GOAL_DESCRIPTION = "Lass die Bälle kollidieren und einen in den Eimer rollen!"
+    HINT = "Bringe beide Bälle über dem Eimer zum Zusammenprall, damit der Abpraller direkt in den Eimer fällt."
+    BG_COLOR = (242, 246, 252)
+    STAR_THRESHOLDS = (2, 4)
+    SOLUTION_DESCRIPTION = "Zwei gekreuzte Rutschen führen beide Bälle direkt über dem Eimer zusammen, wo sie zusammenstoßen und hineinfallen."
     SOLUTION_STROKES = [
-        [(230, 240), (280, 320), (700, 500), (1200, 700), (1530, 850)]
+        [(250, 200), (300, 310), (920, 830)],
+        [(1670, 250), (1620, 310), (960, 720)]
     ]
 
     def setup(self, world: PhysicsWorld) -> None:
         W, H = WINDOW_WIDTH, WINDOW_HEIGHT
         floor_y = H - 90
 
-        # Boden
-        world.add_static_segment((0, floor_y), (W, floor_y), color=(140, 120, 100), radius=6)
+        # Start-Podest links
+        world.add_static_segment((150, 320), (450, 320), color=(140, 120, 100), radius=6)
+        world.add_ball((300, 270), color=COLOR_CORAL)
 
-        # Start-Podest links oben
-        world.add_static_segment((120, 320), (420, 320), color=(140, 120, 100), radius=6)
-        world.add_ball((270, 270), color=COLOR_CORAL)
+        # Start-Podest rechts
+        world.add_static_segment((W - 450, 320), (W - 150, 320), color=(140, 120, 100), radius=6)
+        world.add_ball((W - 300, 270), color=COLOR_BLUE)
 
-        # Drehpunkt / Stütze für die Wippe
-        world.add_static_segment((960, 640), (940, 680), color=COLOR_GREEN, radius=8)
-        world.add_static_segment((960, 640), (980, 680), color=COLOR_GREEN, radius=8)
-        world.add_static_segment((930, 680), (990, 680), color=COLOR_GREEN, radius=6)
+        # Eimer unten Mitte
+        world.add_bucket((W // 2, floor_y), width=180, height=120, color=COLOR_TEAL)
 
-        # Balancierender Wippbalken
-        world.add_dynamic_box((960, 625), width=520, height=22, mass=4.0, color=(160, 110, 70))
+        # Boden links und rechts
+        world.add_static_segment((0, floor_y), (W // 2 - 110, floor_y), color=(140, 120, 100), radius=6)
+        world.add_static_segment((W // 2 + 110, floor_y), (W, floor_y), color=(140, 120, 100), radius=6)
 
-        # Eimer unten rechts
-        world.add_bucket((1600, floor_y), width=160, height=120, color=COLOR_TEAL)
+    def check_victory(self, world: PhysicsWorld, dt: float = 0.0) -> bool:
+        if not world.balls_collided:
+            return False
+        return any(b.in_bucket for b in world.balls)

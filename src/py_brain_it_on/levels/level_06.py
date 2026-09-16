@@ -1,43 +1,42 @@
 """
-Level 6 — Die Schlucht
+Level 6 — Bogenbrücke
 
-Ein tiefer Abgrund trennt den linken Bereich vom Zielbereich rechts.
-Der Ball muss die Schlucht überqueren und in den Eimer gelangen.
+Ball liegt links. Eine hohe Wand steht in der Mitte.
+Eimer steht rechts auf dem Boden.
+Ziel: Den Ball über die Wand hebeln, rollen oder katapultieren.
 """
 from __future__ import annotations
 
 from .base_level import BaseLevel
 from ..physics.world import PhysicsWorld
-from ..settings import COLOR_CORAL, COLOR_TEAL, WINDOW_WIDTH, WINDOW_HEIGHT
+from ..settings import COLOR_CORAL, COLOR_TEAL, COLOR_ORANGE, WINDOW_WIDTH, WINDOW_HEIGHT
 
 
 class Level06(BaseLevel):
     LEVEL_NUMBER = 6
-    TITLE = "Die Schlucht"
-    GOAL_DESCRIPTION = "Überquere die Schlucht und erreiche den Eimer!"
-    HINT = "Baue eine tragfähige Brücke über den Abgrund oder katapultiere den Ball hinüber."
-    BG_COLOR = (244, 240, 234)
-    STAR_THRESHOLDS = (1, 2)
-    SOLUTION_DESCRIPTION = "Schlucht-Brücke: Eine lange Brücke von der Klippe über den Abgrund direkt in den Eimer."
+    TITLE = "Bogenbrücke"
+    GOAL_DESCRIPTION = "Befördere den Ball über die Wand in den Eimer!"
+    HINT = "Nutze einen Hebel oder ein fallendes Gewicht, um den Ball über die Wand zu katapultieren."
+    BG_COLOR = (245, 240, 232)
+    STAR_THRESHOLDS = (1, 3)
+    SOLUTION_DESCRIPTION = "Bogenbrücke: Ein einzelner geschwungener Bogen von der Plattform über die Mauer in den Eimer."
     SOLUTION_STROKES = [
-        [(240, 390), (290, 455), (600, 490), (1350, 580), (1550, 595)]
+        [(240, 380), (280, 470), (600, 500), (960, 525), (1300, 680), (1530, 850)]
     ]
 
     def setup(self, world: PhysicsWorld) -> None:
         W, H = WINDOW_WIDTH, WINDOW_HEIGHT
-        left_cliff_y = 460
-        right_cliff_y = 720
+        floor_y = H - 90
 
-        # Linke Klippe (erhöht)
-        world.add_static_segment((0, left_cliff_y), (550, left_cliff_y), color=(130, 115, 95), radius=8)
-        world.add_static_segment((550, left_cliff_y), (550, H), color=(130, 115, 95), radius=8)
+        # Durchgehender Boden
+        world.add_static_segment((0, floor_y), (W, floor_y), color=(140, 120, 100), radius=6)
 
-        # Ball auf linker Klippe
-        world.add_ball((300, left_cliff_y - 45), color=COLOR_CORAL)
+        # Ball-Plattform links
+        world.add_static_segment((120, 480), (450, 480), color=(140, 120, 100), radius=6)
+        world.add_ball((280, 430), color=COLOR_CORAL)
 
-        # Rechte Klippe
-        world.add_static_segment((1350, right_cliff_y), (W, right_cliff_y), color=(130, 115, 95), radius=8)
-        world.add_static_segment((1350, right_cliff_y), (1350, H), color=(130, 115, 95), radius=8)
+        # Hindernis-Wand in der Mitte
+        world.add_static_segment((960, floor_y), (960, 540), color=COLOR_ORANGE, radius=10)
 
-        # Eimer auf rechter Klippe
-        world.add_bucket((1600, right_cliff_y), width=150, height=120, color=COLOR_TEAL)
+        # Eimer rechts
+        world.add_bucket((1550, floor_y), width=160, height=120, color=COLOR_TEAL)

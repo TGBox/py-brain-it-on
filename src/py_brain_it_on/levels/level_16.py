@@ -1,46 +1,45 @@
 """
-Level 16 — Hängebrücke
+Level 16 — Der Tunnel
 
-Vier schwebende Inseln führen treppenförmig hinab zum Eimer.
-Dazwischen klaffen weite Lücken ohne Boden.
-Ziel: Verbinde die Inseln zu einer durchgehenden Bahn.
+Der Ball muss durch einen schmalen, überdachten Tunnel rollen.
+Zu steile Kurven lassen den Ball an der Tunneldecke abprallen und abstürzen.
 """
 from __future__ import annotations
 
 from .base_level import BaseLevel
 from ..physics.world import PhysicsWorld
-from ..settings import COLOR_CORAL, COLOR_TEAL, COLOR_GREEN, WINDOW_WIDTH, WINDOW_HEIGHT
+from ..settings import COLOR_CORAL, COLOR_TEAL, COLOR_ORANGE, WINDOW_WIDTH, WINDOW_HEIGHT
 
 
 class Level16(BaseLevel):
     LEVEL_NUMBER = 16
-    TITLE = "Hängebrücke"
-    GOAL_DESCRIPTION = "Verbinde die schwebenden Inseln zum Ziel-Eimer!"
-    HINT = "Zeichne eine durchgehende geschwungene Linie, die über die Pfeiler gleitet."
-    BG_COLOR = (240, 246, 244)
-    STAR_THRESHOLDS = (1, 2)
-    SOLUTION_DESCRIPTION = "Durchgehende Brücke: Ein geschwungener Steg über alle Inseln mit integriertem Brems-Stopper am Eimer."
+    TITLE = "Der Tunnel"
+    GOAL_DESCRIPTION = "Führe den Ball durch den überdachten Tunnel in den Eimer!"
+    HINT = "Zeichne eine sanfte, flache Rampe, die den Ball geradewegs durch den Tunnel gleiten lässt."
+    BG_COLOR = (244, 242, 238)
+    STAR_THRESHOLDS = (2, 4)
+    SOLUTION_DESCRIPTION = "Tunnelführung: Eine Rampe leitet den Ball sauber durch den überdachten Tunnel, eine Austrittsrampe führt ihn direkt in den Eimer."
     SOLUTION_STROKES = [
-        [(240, 280), (280, 370), (550, 440), (800, 500), (1050, 560), (1300, 600), (1500, 640), (1630, 660), (1660, 720), (1720, 720), (1740, 500)]
+        [(240, 390), (320, 500), (450, 640), (620, 725), (660, 735)],
+        [(1380, 740), (1450, 740), (1560, 740), (1630, 760)]
     ]
 
     def setup(self, world: PhysicsWorld) -> None:
         W, H = WINDOW_WIDTH, WINDOW_HEIGHT
         floor_y = H - 90
 
-        # Insel 1 mit Ball
-        world.add_static_segment((150, 380), (450, 380), color=COLOR_GREEN, radius=8)
-        world.add_ball((280, 330), color=COLOR_CORAL)
+        # Start-Podest links
+        world.add_static_segment((120, 460), (450, 460), color=(140, 120, 100), radius=6)
+        world.add_ball((280, 410), color=COLOR_CORAL)
 
-        # Insel 2
-        world.add_static_segment((680, 520), (950, 520), color=COLOR_GREEN, radius=8)
+        # Tunnel: Boden & Decke
+        world.add_static_segment((650, 740), (1400, 740), color=(140, 120, 100), radius=8)
+        world.add_static_segment((700, 600), (1350, 600), color=COLOR_ORANGE, radius=8)
 
-        # Insel 3
-        world.add_static_segment((1150, 660), (1420, 660), color=COLOR_GREEN, radius=8)
+        # Eimer rechts auf Anschluss-Podest (abgesenkt, damit Korböffnung auf Tunnelhöhe liegt)
+        world.add_static_segment((1450, 860), (1850, 860), color=(140, 120, 100), radius=6)
+        world.add_bucket((1650, 860), width=160, height=120, color=COLOR_TEAL)
 
-        # Insel 4 mit Eimer
-        world.add_static_segment((1520, 800), (1850, 800), color=COLOR_GREEN, radius=8)
-        world.add_bucket((1680, 800), width=150, height=120, color=COLOR_TEAL)
-
-        # Boden weit unten
+        # Tiefer Boden
         world.add_static_segment((0, floor_y), (W, floor_y), color=(140, 120, 100), radius=6)
+
