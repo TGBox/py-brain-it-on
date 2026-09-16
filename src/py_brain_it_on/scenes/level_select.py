@@ -32,6 +32,16 @@ _LEVEL_COLORS = [
 ]
 
 
+def _draw_lock(surface: pygame.Surface, cx: int, cy: int, color: tuple) -> None:
+    """Zeichnet ein einfaches Schloss-Symbol."""
+    # Bügel
+    pygame.draw.arc(surface, color, pygame.Rect(cx - 9, cy - 14, 18, 16), 0, math.pi, 3)
+    # Körper
+    pygame.draw.rect(surface, color, pygame.Rect(cx - 12, cy - 4, 24, 18), border_radius=3)
+    # Schlüsselloch
+    pygame.draw.circle(surface, COLOR_WHITE, (cx, cy + 3), 3)
+
+
 class LevelSelectScene(BaseScene):
     """Level-Auswahl-Szene."""
 
@@ -44,7 +54,7 @@ class LevelSelectScene(BaseScene):
             for i in range(TOTAL_LEVELS)
         ]
         self._back_btn = RoundedButton(
-            "← Zurück",
+            "< Zurueck",
             pygame.Rect(20, 15, 130, 44),
             color=(140, 130, 125),
             font_size=FONT_SIZE_SM,
@@ -101,10 +111,22 @@ class LevelSelectScene(BaseScene):
         save = self.game.save_data
         total_stars = sum(v.get("stars", 0) for v in save["levels"].values())
         max_stars = TOTAL_LEVELS * 3
+        # Sterne zeichnen
+        star_y = WINDOW_HEIGHT - 22
+        star_r = 9
+        star_count_display = min(total_stars, max_stars)
+        total_w_stars = 3 * star_r * 2 + 2 * 4  # 3 Sterne mit Abstand
+        text_before = f"{total_stars} / {max_stars} Sterne"
         font_sm = get_font(FONT_SIZE_SM)
-        star_text = f"⭐ {total_stars} / {max_stars} Sterne"
-        st_surf = font_sm.render(star_text, True, (150, 140, 135))
-        surface.blit(st_surf, st_surf.get_rect(center=(WINDOW_WIDTH // 2, WINDOW_HEIGHT - 22)))
+        text_surf = font_sm.render(text_before, True, (150, 140, 135))
+        total_content_w = total_w_stars + 8 + text_surf.get_width()
+        start_x = WINDOW_WIDTH // 2 - total_content_w // 2
+        for s in range(3):
+            draw_star(surface, (start_x + s * (star_r * 2 + 4) + star_r, star_y),
+                      star_r, filled=(s < min(3, total_stars)))
+        surface.blit(text_surf, text_surf.get_rect(
+            midleft=(start_x + total_w_stars + 8, star_y)
+        ))
 
     def _draw_tile(self, surface: pygame.Surface, idx: int, rect: pygame.Rect) -> None:
         level_num = idx + 1
@@ -135,13 +157,11 @@ class LevelSelectScene(BaseScene):
         draw_rounded_rect(surface, color, scaled_rect, radius=18, shadow_offset=5)
 
         if not unlocked:
-            # Schloss-Symbol
-            font_lock = get_font(28)
-            lock_surf = font_lock.render("🔒", True, (160, 155, 150))
-            surface.blit(lock_surf, lock_surf.get_rect(center=(cx, cy - 8)))
+            # Schloss-Symbol (gezeichnet)
+            _draw_lock(surface, cx, cy - 8, (160, 155, 150))
             font_sm = get_font(FONT_SIZE_XS)
             lock_label = font_sm.render(f"Level {level_num}", True, (160, 155, 150))
-            surface.blit(lock_label, lock_label.get_rect(center=(cx, cy + 22)))
+            surface.blit(lock_label, lock_label.get_rect(center=(cx, cy + 26)))
         else:
             # Level-Nummer
             font_num = get_font(FONT_SIZE_MD + 6, bold=True)
@@ -155,7 +175,7 @@ class LevelSelectScene(BaseScene):
                 draw_star(surface, (sx, cy + 22), star_r, filled=(s < stars))
 
     def _calc_tile_rects(self) -> list[pygame.Rect]:
-        """Berechnet die Positionen der 8 Kacheln in einem 4×2-Grid."""
+        """Berechnet die Positionen der Kacheln in einem Grid."""
         rects = []
         cols, rows = 4, 2
         tile_w, tile_h = 150, 110
@@ -167,7 +187,7 @@ class LevelSelectScene(BaseScene):
                 x = pad_x + col * (tile_w + pad_x)
                 y = start_y + row * (tile_h + pad_y)
                 rects.append(pygame.Rect(x, y, tile_w, tile_h))
-        return rects
+        return rects[:TOTAL_LEVELS]
 
     def _is_unlocked(self, level: int) -> bool:
         """Level 1 ist immer frei; folgende werden nach Lösung des Vorgängers freigeschaltet."""
@@ -178,8 +198,8 @@ class LevelSelectScene(BaseScene):
         return prev.get("solved", False)
 
     def _start_level(self, level: int) -> None:
-        from .game_scene import GameScene
-        self.game.push_scene(GameScene(self.game, level))
+        from .play_scene import PlayScene
+        self.game.push_scene(PlayScene(self.game, level))
 
     def _on_back(self) -> None:
         self.game.pop_scene()

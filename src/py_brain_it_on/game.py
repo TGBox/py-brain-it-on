@@ -1,5 +1,5 @@
 """
-game.py — Haupt-Game-Loop und Szenenmanager für py-brain-it-out.
+game.py — Haupt-Game-Loop und Szenenmanager für py-brain-it-on.
 """
 from __future__ import annotations
 

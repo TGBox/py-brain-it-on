@@ -1,5 +1,5 @@
 """
-py_brain_it_out — Python-Adaption von Brain it out!
+py_brain_it_on — Python-Adaption von Brain it on!
 
 Einstiegspunkt: main()
 """

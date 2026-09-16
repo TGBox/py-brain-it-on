@@ -2,7 +2,6 @@
 menu_scene.py — Hauptmenü mit animiertem Hintergrund.
 """
 from __future__ import annotations
-from py_brain_it_out.settings import FONT_SIZE_XS
 
 import math
 import random
@@ -12,8 +11,8 @@ from .base_scene import BaseScene
 from ..settings import (
     COLOR_BG, COLOR_CORAL, COLOR_TEAL, COLOR_YELLOW,
     COLOR_TEXT, COLOR_WHITE, COLOR_PURPLE,
-    FONT_SIZE_XL, FONT_SIZE_LG, FONT_SIZE_MD, FONT_SIZE_SM,
-    WINDOW_WIDTH, WINDOW_HEIGHT,
+    FONT_SIZE_XL, FONT_SIZE_LG, FONT_SIZE_MD, FONT_SIZE_SM, FONT_SIZE_XS,
+    WINDOW_WIDTH, WINDOW_HEIGHT, TOTAL_LEVELS,
 )
 from ..ui.components import RoundedButton, get_font, draw_rounded_rect, draw_text_centered
 from ..ui.animations import Tween, ease_out_bounce, PulseEffect
@@ -32,7 +31,7 @@ class MenuScene(BaseScene):
         btn_w, btn_h = 260, 60
         cx = WINDOW_WIDTH // 2
         self._btn_play = RoundedButton(
-            "🎮  Spielen",
+            "Spielen",
             pygame.Rect(cx - btn_w // 2, 320, btn_w, btn_h),
             color=COLOR_CORAL,
             on_click=self._on_play,
@@ -95,22 +94,32 @@ class MenuScene(BaseScene):
             pygame.draw.circle(bubble_surf, (*b["color"], alpha + 20), (b["r"] + 2, b["r"] + 2), b["r"], 2)
             surface.blit(bubble_surf, (int(b["x"]) - b["r"] - 2, int(b["y"]) - b["r"] - 2))
 
-        # Dekoratives Gehirn-Symbol (Text-Kunst)
-        font_brain = get_font(80)
-        brain_surf = font_brain.render("🧠", True, (200, 180, 170))
+        # Dekoratives Gehirn-Symbol (gezeichnet)
+        brain_cx, brain_cy = WINDOW_WIDTH // 2, 180
         scale = self._pulse.scale
-        scaled = pygame.transform.scale(
-            brain_surf,
-            (int(brain_surf.get_width() * scale), int(brain_surf.get_height() * scale))
-        )
-        surface.blit(scaled, scaled.get_rect(center=(WINDOW_WIDTH // 2, 180)))
+        r = int(55 * scale)
+        # Äußerer Kreis
+        pygame.draw.circle(surface, COLOR_CORAL, (brain_cx, brain_cy), r)
+        pygame.draw.circle(surface, (240, 180, 160), (brain_cx, brain_cy), r - 6)
+        # Falten-Linien
+        for angle, length in [(0.3, 20), (1.1, 16), (2.0, 18), (2.8, 14)]:
+            import math as _m
+            ex = brain_cx + int(_m.cos(angle) * (r - 14))
+            ey = brain_cy + int(_m.sin(angle) * (r - 14))
+            ex2 = brain_cx + int(_m.cos(angle) * (r - 14 + length * 0.5))
+            ey2 = brain_cy + int(_m.sin(angle) * (r - 14 + length * 0.5))
+            pygame.draw.line(surface, (220, 150, 130), (ex, ey), (ex2, ey2), 3)
+        # Trennlinie Mitte
+        pygame.draw.line(surface, (220, 150, 130),
+                         (brain_cx, brain_cy - r + 10),
+                         (brain_cx, brain_cy + r - 10), 2)
 
         # Titel mit Bounce-Animation
         title_y_offset = self._title_tween.value
         font_title = get_font(FONT_SIZE_XL + 8, bold=True)
-        title_surf = font_title.render("Py Brain It Out!", True, COLOR_TEXT)
+        title_surf = font_title.render("Py Brain It On!", True, COLOR_TEXT)
         # Schatten
-        shadow_surf = font_title.render("Py Brain It Out!", True, (0, 0, 0))
+        shadow_surf = font_title.render("Py Brain It On!", True, (0, 0, 0))
         shadow_surf.set_alpha(30)
         surface.blit(shadow_surf, shadow_surf.get_rect(center=(WINDOW_WIDTH // 2 + 3, 78 + 3 + title_y_offset)))
         surface.blit(title_surf, title_surf.get_rect(center=(WINDOW_WIDTH // 2, 78 + title_y_offset)))
@@ -118,7 +127,7 @@ class MenuScene(BaseScene):
         # Untertitel
         subtitle_alpha = int(min(255, self._subtitle_tween.value * 255))
         font_sub = get_font(FONT_SIZE_SM)
-        sub_surf = font_sub.render("Tricky Rätsel auf Deutsch 🇩🇪", True, (120, 110, 105))
+        sub_surf = font_sub.render("Tricky Raetsel", True, (120, 110, 105))
         sub_surf.set_alpha(subtitle_alpha)
         surface.blit(sub_surf, sub_surf.get_rect(center=(WINDOW_WIDTH // 2, 240)))
 
@@ -137,7 +146,7 @@ class MenuScene(BaseScene):
 
         # Version
         font_ver = get_font(12)
-        ver_surf = font_ver.render("v0.1.0 — 8 Level", True, (180, 170, 165))
+        ver_surf = font_ver.render(f"v0.1.0 — {TOTAL_LEVELS} Level", True, (180, 170, 165))
         surface.blit(ver_surf, (WINDOW_WIDTH - 130, WINDOW_HEIGHT - 22))
 
     def _on_play(self) -> None:

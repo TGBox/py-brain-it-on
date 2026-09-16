@@ -1,5 +1,5 @@
 """
-animations.py — Easing-Funktionen und Animations-Hilfsmittel für py-brain-it-out.
+animations.py — Easing-Funktionen und Animations-Hilfsmittel für py-brain-it-on.
 """
 from __future__ import annotations
 

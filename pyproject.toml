@@ -1,7 +1,7 @@
 [project]
-name = "py-brain-it-out"
+name = "py-brain-it-on"
 version = "0.1.0"
-description = "A python game adaptation of Brain it out!"
+description = "A python game adaptation of Brain it on!"
 readme = "README.md"
 authors = [
     { name = "Daniel Rösch", email = "droesch91@gmail.com" }
@@ -9,10 +9,11 @@ authors = [
 requires-python = ">=3.14"
 dependencies = [
     "pygame-ce>=2.5.8",
+    "pymunk>=7.3.0",
 ]
 
 [project.scripts]
-py-brain-it-out = "py_brain_it_out:main"
+py-brain-it-on = "py_brain_it_on:main"
 
 [build-system]
 requires = ["uv_build>=0.12.6,<0.13.0"]

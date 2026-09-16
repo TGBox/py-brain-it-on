@@ -8,8 +8,8 @@ from pathlib import Path
 
 from .settings import TOTAL_LEVELS
 
-# Speicherort: ~/.py-brain-it-out/save.json
-_SAVE_DIR = Path.home() / ".py-brain-it-out"
+# Speicherort: ~/.py-brain-it-on/save.json
+_SAVE_DIR = Path.home() / ".py-brain-it-on"
 _SAVE_FILE = _SAVE_DIR / "save.json"
 
 _DEFAULT_SAVE: dict = {

@@ -1,5 +1,5 @@
 """
-components.py — Wiederverwendbare UI-Komponenten für py-brain-it-out.
+components.py — Wiederverwendbare UI-Komponenten für py-brain-it-on.
 """
 from __future__ import annotations
 
