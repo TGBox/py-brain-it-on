@@ -24,7 +24,7 @@ from ..settings import (
     FONT_SIZE_LG, FONT_SIZE_MD, FONT_SIZE_SM, FONT_SIZE_XS,
 )
 from ..ui.components import (
-    RoundedButton, get_font, draw_rounded_rect, draw_star,
+    RoundedButton, get_font, draw_rounded_rect, draw_star, wrap_text_to_lines,
 )
 from ..ui.animations import Tween, ease_out_bounce, ease_out_back
 from .. import save_manager
@@ -130,15 +130,15 @@ class PlayScene(BaseScene):
         # Dialog-Buttons für gescheiterten Versuch
         cx, cy = WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2
         self._btn_fail_keep = RoundedButton(
-            "Mit Formen weitermachen", pygame.Rect(cx - 320, cy + 30, 300, 54),
+            "Mit Formen weitermachen", pygame.Rect(cx - 335, cy + 30, 320, 54),
             color=COLOR_TEAL, font_size=FONT_SIZE_SM, on_click=self._on_edit_shapes,
         )
         self._btn_fail_reset = RoundedButton(
-            "Ganz neu beginnen", pygame.Rect(cx + 20, cy + 30, 290, 54),
+            "Ganz neu beginnen", pygame.Rect(cx + 15, cy + 30, 320, 54),
             color=COLOR_CORAL, font_size=FONT_SIZE_SM, on_click=self._on_reset,
         )
         self._btn_fail_solution = RoundedButton(
-            "Musterlösung ansehen...", pygame.Rect(cx - 190, cy + 100, 380, 54),
+            "Musterlösung ansehen...", pygame.Rect(cx - 200, cy + 105, 400, 54),
             color=(215, 145, 35), font_size=FONT_SIZE_SM, on_click=self._on_request_solution,
         )
 
@@ -358,15 +358,28 @@ class PlayScene(BaseScene):
         # Aktueller Strich (Vorschau)
         self._drawing.draw_preview(surface)
 
-        # Musterlösung-Banner (falls aktiv)
+        # Musterlösung-Banner (falls aktiv) - zweizeilig für perfekte Lesbarkeit
         if self._solution_active:
-            banner_rect = pygame.Rect(100, self.HEADER_H + 12, WINDOW_WIDTH - 200, 48)
+            banner_rect = pygame.Rect(80, self.HEADER_H + 8, WINDOW_WIDTH - 160, 62)
             draw_rounded_rect(surface, (255, 248, 230), banner_rect, radius=12, border_color=(215, 155, 45), border_width=2)
             font_banner = get_font(FONT_SIZE_XS, bold=True)
+            font_sub_b = get_font(FONT_SIZE_XS)
             desc = getattr(self._level, "SOLUTION_DESCRIPTION", "Musterlösung geladen.")
-            b_text = f"Musterlösung: {desc}  •  Klicke 'Starten', um sie auszuführen!"
-            b_surf = font_banner.render(b_text, True, (160, 95, 20))
-            surface.blit(b_surf, b_surf.get_rect(center=banner_rect.center))
+            b_surf1 = font_banner.render(f"Musterlösung: {desc}", True, (160, 95, 20))
+            b_surf2 = font_sub_b.render("Klicke unten auf 'Starten', um die Musterlösung zu simulieren!", True, (190, 120, 30))
+            surface.blit(b_surf1, b_surf1.get_rect(center=(banner_rect.centerx, banner_rect.top + 20)))
+            surface.blit(b_surf2, b_surf2.get_rect(center=(banner_rect.centerx, banner_rect.top + 43)))
+
+        # Info-Pill: Klick auf Niete löst Verbindung (schwebend über der Toolbar)
+        if self._state == STATE_DRAWING and self._world and any(s.connection_points for s in self._world.drawn_strokes):
+            font_info = get_font(FONT_SIZE_XS)
+            tip_text = "Tipp: Klicke auf rote Niete, um Verbindungen zu lösen"
+            tip_surf = font_info.render(tip_text, True, (150, 70, 60))
+            pill_w = tip_surf.get_width() + 36
+            pill_h = 32
+            pill_rect = pygame.Rect(WINDOW_WIDTH // 2 - pill_w // 2, WINDOW_HEIGHT - self.TOOLBAR_H - 42, pill_w, pill_h)
+            draw_rounded_rect(surface, (255, 242, 240), pill_rect, radius=16, border_color=(235, 170, 160), border_width=1)
+            surface.blit(tip_surf, tip_surf.get_rect(center=pill_rect.center))
 
         # Toolbar-Hintergrund
         toolbar_rect = pygame.Rect(0, WINDOW_HEIGHT - self.TOOLBAR_H, WINDOW_WIDTH, self.TOOLBAR_H)
@@ -386,13 +399,6 @@ class PlayScene(BaseScene):
             if self._failed_attempts >= 2:
                 self._btn_toolbar_solution.draw(surface)
 
-            # Info-Tipp: Klick auf Niete löst Verbindung
-            if any(s.connection_points for s in self._world.drawn_strokes):
-                font_info = get_font(FONT_SIZE_XS)
-                tip_surf = font_info.render("Tipp: Klicke auf rote Niete, um Verbindungen zu lösen", True, (160, 100, 90))
-                right_bound = WINDOW_WIDTH - 445 if self._failed_attempts >= 2 else WINDOW_WIDTH - 220
-                surface.blit(tip_surf, tip_surf.get_rect(midright=(right_bound, WINDOW_HEIGHT - self.TOOLBAR_H // 2)))
-
         elif self._state == STATE_SIMULATING:
             self._btn_edit.draw(surface)
             self._btn_sim_reset.draw(surface)
@@ -407,7 +413,7 @@ class PlayScene(BaseScene):
         if self._state in (STATE_DRAWING, STATE_SIMULATING):
             font_strokes = get_font(FONT_SIZE_SM)
             sc_surf = font_strokes.render(f"Gezeichnete Striche: {self._stroke_count}", True, COLOR_TEXT_LIGHT)
-            surface.blit(sc_surf, sc_surf.get_rect(midleft=(WINDOW_WIDTH // 2 + 150, WINDOW_HEIGHT - self.TOOLBAR_H // 2)))
+            surface.blit(sc_surf, sc_surf.get_rect(midleft=(WINDOW_WIDTH // 2 + 140, WINDOW_HEIGHT - self.TOOLBAR_H // 2)))
 
         # Hinweis-Overlay
         if self._show_hint:
@@ -472,31 +478,20 @@ class PlayScene(BaseScene):
         overlay.fill((0, 0, 0, 140))
         surface.blit(overlay, (0, 0))
 
-        card_w, card_h = 680, 260
+        card_w, card_h = 760, 290
         cx, cy = WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2
         card_rect = pygame.Rect(cx - card_w // 2, cy - card_h // 2, card_w, card_h)
         draw_rounded_rect(surface, COLOR_WHITE, card_rect, radius=24, shadow_offset=8)
 
         font_title = get_font(FONT_SIZE_MD, bold=True)
         t_surf = font_title.render("Level-Tipp", True, COLOR_YELLOW)
-        surface.blit(t_surf, t_surf.get_rect(center=(cx, cy - 65)))
+        surface.blit(t_surf, t_surf.get_rect(center=(cx, cy - 80)))
 
         font_hint = get_font(FONT_SIZE_SM)
-        # Zeilenumbruch
-        words = self._level.HINT.split()
-        lines, cur = [], ""
-        for w in words:
-            test = (cur + " " + w).strip()
-            if font_hint.size(test)[0] < card_w - 60:
-                cur = test
-            else:
-                if cur:
-                    lines.append(cur)
-                cur = w
-        if cur:
-            lines.append(cur)
+        lines = wrap_text_to_lines(self._level.HINT, font_hint, card_w - 60)
 
-        y = cy - 10
+        total_lines_h = len(lines) * (font_hint.get_height() + 6)
+        y = cy - 20 - total_lines_h // 2 + font_hint.get_height() // 2
         for line in lines:
             ls = font_hint.render(line, True, COLOR_TEXT)
             surface.blit(ls, ls.get_rect(center=(cx, y)))
@@ -512,36 +507,46 @@ class PlayScene(BaseScene):
         surface.blit(overlay, (0, 0))
 
         has_solution = self._failed_attempts >= 2
-        card_w, card_h = 780, (410 if has_solution else 320)
+        card_w, card_h = 840, (440 if has_solution else 340)
         cx, cy = WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2
         card_rect = pygame.Rect(cx - card_w // 2, cy - card_h // 2, card_w, card_h)
         draw_rounded_rect(surface, COLOR_WHITE, card_rect, radius=26, shadow_offset=10)
 
         font_title = get_font(FONT_SIZE_LG, bold=True)
         t_surf = font_title.render("Versuch nicht geglückt", True, COLOR_CORAL)
-        surface.blit(t_surf, t_surf.get_rect(center=(cx, cy - (125 if has_solution else 80))))
+        surface.blit(t_surf, t_surf.get_rect(center=(cx, cy - (145 if has_solution else 95))))
 
         font_msg = get_font(FONT_SIZE_SM)
         m1_surf = font_msg.render("Der Ball hat das Ziel nicht erreicht.", True, COLOR_TEXT)
-        surface.blit(m1_surf, m1_surf.get_rect(center=(cx, cy - (75 if has_solution else 30))))
+        surface.blit(m1_surf, m1_surf.get_rect(center=(cx, cy - (95 if has_solution else 48))))
 
         font_sub = get_font(FONT_SIZE_SM)
-        sub_text = (
-            "Möchtest du die Formen anpassen, neu beginnen oder die Musterlösung ansehen?"
-            if has_solution else
-            "Möchtest du die gezeichneten Formen anpassen oder ganz neu beginnen?"
-        )
-        m2_surf = font_sub.render(sub_text, True, COLOR_TEXT_LIGHT)
-        surface.blit(m2_surf, m2_surf.get_rect(center=(cx, cy - (40 if has_solution else 2))))
+        if has_solution:
+            sub_lines = [
+                "Möchtest du die Formen anpassen, neu beginnen",
+                "oder dir die Musterlösung ansehen?",
+            ]
+            y_sub = cy - 50
+        else:
+            sub_lines = [
+                "Möchtest du die Formen anpassen",
+                "oder ganz neu beginnen?",
+            ]
+            y_sub = cy - 8
 
-        btn_y1 = cy + (15 if has_solution else 45)
-        self._btn_fail_keep.rect.center = (cx - 165, btn_y1)
-        self._btn_fail_reset.rect.center = (cx + 165, btn_y1)
+        for sl in sub_lines:
+            sl_surf = font_sub.render(sl, True, COLOR_TEXT_LIGHT)
+            surface.blit(sl_surf, sl_surf.get_rect(center=(cx, y_sub)))
+            y_sub += font_sub.get_height() + 4
+
+        btn_y1 = cy + (35 if has_solution else 80)
+        self._btn_fail_keep.rect.center = (cx - 175, btn_y1)
+        self._btn_fail_reset.rect.center = (cx + 175, btn_y1)
         self._btn_fail_keep.draw(surface)
         self._btn_fail_reset.draw(surface)
 
         if has_solution:
-            self._btn_fail_solution.rect.center = (cx, cy + 95)
+            self._btn_fail_solution.rect.center = (cx, cy + 115)
             self._btn_fail_solution.draw(surface)
 
     def _draw_solution_confirm_dialog(self, surface: pygame.Surface) -> None:
@@ -580,7 +585,7 @@ class PlayScene(BaseScene):
         overlay.fill((0, 0, 0, alpha))
         surface.blit(overlay, (0, 0))
 
-        card_w, card_h = 640, 420
+        card_w, card_h = 700, 430
         cx, cy = WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2
         cw = int(card_w * min(1.0, scale * 1.5))
         ch = int(card_h * min(1.0, scale * 1.5))
@@ -800,7 +805,7 @@ class PlayScene(BaseScene):
             action = self._on_back_to_menu
         self._btn_next = RoundedButton(
             label,
-            pygame.Rect(cx - 150, cy + 125, 300, 58),
+            pygame.Rect(cx - 170, cy + 125, 340, 58),
             color=COLOR_CORAL,
             font_size=FONT_SIZE_SM,
             on_click=action,

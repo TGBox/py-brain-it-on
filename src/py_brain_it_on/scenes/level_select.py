@@ -74,25 +74,26 @@ class LevelSelectScene(BaseScene):
         )
         self._reset_btn = RoundedButton(
             "Fortschritt zurücksetzen",
-            pygame.Rect(WINDOW_WIDTH - 360, 45, 300, 60),
+            pygame.Rect(WINDOW_WIDTH - 390, 45, 330, 60),
             color=(200, 95, 85),
             font_size=FONT_SIZE_SM,
             on_click=self._on_request_reset,
         )
         self._prev_btn = RoundedButton(
             "Vorherige Seite",
-            pygame.Rect(WINDOW_WIDTH // 2 - 280, 770, 220, 56),
+            pygame.Rect(WINDOW_WIDTH // 2 - 340, 770, 210, 56),
             color=COLOR_TEAL,
             font_size=FONT_SIZE_SM,
             on_click=self._on_prev_page,
         )
         self._next_btn = RoundedButton(
             "Nächste Seite",
-            pygame.Rect(WINDOW_WIDTH // 2 + 60, 770, 220, 56),
+            pygame.Rect(WINDOW_WIDTH // 2 + 130, 770, 210, 56),
             color=COLOR_TEAL,
             font_size=FONT_SIZE_SM,
             on_click=self._on_next_page,
         )
+
 
         # Dialog-Buttons für Reset-Bestätigung
         cx, cy = WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2

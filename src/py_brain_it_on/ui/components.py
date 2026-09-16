@@ -109,7 +109,28 @@ def draw_text_centered(
     return rect
 
 
+def wrap_text_to_lines(text: str, font: pygame.font.Font, max_width: int) -> list[str]:
+    """Bricht einen Text anhand einer maximalen Pixelbreite sauber in Zeilen um."""
+    words = text.split()
+    if not words:
+        return []
+    lines: list[str] = []
+    current_line = ""
+    for word in words:
+        candidate = f"{current_line} {word}".strip()
+        if font.size(candidate)[0] <= max_width:
+            current_line = candidate
+        else:
+            if current_line:
+                lines.append(current_line)
+            current_line = word
+    if current_line:
+        lines.append(current_line)
+    return lines
+
+
 def draw_star(
+
     surface: pygame.Surface,
     center: tuple[int, int],
     radius: float,
@@ -227,8 +248,14 @@ class RoundedButton:
             shadow_offset=4 if self.shadow else 0,
             shadow_color=(0, 0, 0, 50),
         )
-        font = get_font(self.font_size)
+        avail_w = scaled_rect.width - 20
+        font_sz = self.font_size
+        font = get_font(font_sz)
+        while font.size(self.text)[0] > avail_w and font_sz > 14:
+            font_sz -= 2
+            font = get_font(font_sz)
         draw_text_centered(surface, self.text, font, self.text_color, scaled_rect.center)
+
 
     def _get_scaled_rect(self) -> pygame.Rect:
         cx, cy = self.rect.center
