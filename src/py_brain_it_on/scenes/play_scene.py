@@ -8,6 +8,7 @@ Zustandsmaschine:
   FAILED     → Ball außerhalb des Spielfelds (optional, derzeit kein Timeout)
 """
 from __future__ import annotations
+import pymunk
 
 import importlib
 import math
@@ -32,6 +33,7 @@ from .. import save_manager
 STATE_DRAWING    = "drawing"
 STATE_SIMULATING = "simulating"
 STATE_SUCCESS    = "success"
+STATE_FAILED     = "failed"
 
 # Level-Klassen-Registry
 _LEVEL_CLASSES: dict[int, type] = {}
@@ -69,6 +71,9 @@ class PlayScene(BaseScene):
         self._stroke_count = 0
         self._sim_time = 0.0
         self._success_timer = 0.0
+        self._fail_timer = 0.0
+        self._snapshot_strokes: list[dict] = []
+        self._hovered_conn_point: tuple[float, float] | None = None
 
         # Animationen
         self._success_tween = Tween(0, 1, 0.5, ease_out_bounce)
@@ -81,22 +86,49 @@ class PlayScene(BaseScene):
 
         # Buttons (Toolbar)
         btn_y = WINDOW_HEIGHT - self.TOOLBAR_H + 18
-        self._btn_start  = RoundedButton(
-            "Starten", pygame.Rect(WINDOW_WIDTH // 2 - 250, btn_y, 220, 54),
-            color=COLOR_GREEN, font_size=FONT_SIZE_SM, on_click=self._on_start,
-        )
-        self._btn_reset  = RoundedButton(
-            "Neu zeichnen", pygame.Rect(WINDOW_WIDTH // 2 + 10, btn_y, 240, 54),
-            color=COLOR_CORAL, font_size=FONT_SIZE_SM, on_click=self._on_reset,
-        )
-        self._btn_hint   = RoundedButton(
-            "Tipp", pygame.Rect(WINDOW_WIDTH - 210, btn_y, 180, 54),
-            color=COLOR_YELLOW, font_size=FONT_SIZE_SM, on_click=self._on_hint,
-        )
-        self._btn_back   = RoundedButton(
-            "Zurück", pygame.Rect(30, btn_y, 160, 54),
+        self._btn_back  = RoundedButton(
+            "Zurück", pygame.Rect(30, btn_y, 140, 54),
             color=(140, 130, 125), font_size=FONT_SIZE_SM, on_click=self._on_back,
         )
+        self._btn_undo  = RoundedButton(
+            "Rückgängig", pygame.Rect(185, btn_y, 170, 54),
+            color=(110, 130, 150), font_size=FONT_SIZE_SM, on_click=self._on_undo,
+        )
+        self._btn_reset = RoundedButton(
+            "Ganz neu", pygame.Rect(370, btn_y, 150, 54),
+            color=COLOR_CORAL, font_size=FONT_SIZE_SM, on_click=self._on_reset,
+        )
+        self._btn_start = RoundedButton(
+            "Starten", pygame.Rect(WINDOW_WIDTH // 2 - 120, btn_y, 240, 54),
+            color=COLOR_GREEN, font_size=FONT_SIZE_SM, on_click=self._on_start,
+        )
+
+        # Buttons während der Simulation
+        self._btn_edit = RoundedButton(
+            "Formen anpassen", pygame.Rect(WINDOW_WIDTH // 2 - 270, btn_y, 250, 54),
+            color=COLOR_TEAL, font_size=FONT_SIZE_SM, on_click=self._on_edit_shapes,
+        )
+        self._btn_sim_reset = RoundedButton(
+            "Ganz neu", pygame.Rect(WINDOW_WIDTH // 2 + 10, btn_y, 200, 54),
+            color=COLOR_CORAL, font_size=FONT_SIZE_SM, on_click=self._on_reset,
+        )
+
+        self._btn_hint  = RoundedButton(
+            "Tipp", pygame.Rect(WINDOW_WIDTH - 200, btn_y, 170, 54),
+            color=COLOR_YELLOW, font_size=FONT_SIZE_SM, on_click=self._on_hint,
+        )
+
+        # Dialog-Buttons für gescheiterten Versuch
+        cx, cy = WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2
+        self._btn_fail_keep = RoundedButton(
+            "Mit Formen weitermachen", pygame.Rect(cx - 330, cy + 45, 310, 56),
+            color=COLOR_TEAL, font_size=FONT_SIZE_SM, on_click=self._on_edit_shapes,
+        )
+        self._btn_fail_reset = RoundedButton(
+            "Ganz neu beginnen", pygame.Rect(cx + 20, cy + 45, 290, 56),
+            color=COLOR_CORAL, font_size=FONT_SIZE_SM, on_click=self._on_reset,
+        )
+
         self._btn_next: RoundedButton | None = None
 
         self._reset_world()
@@ -116,30 +148,56 @@ class PlayScene(BaseScene):
     # ------------------------------------------------------------------
 
     def handle_event(self, event: pygame.event.Event) -> None:
-        # Erfolgs-Overlay: nur Weiter-Button
+        # Erfolgs-Overlay
         if self._state == STATE_SUCCESS:
             if self._btn_next:
                 self._btn_next.handle_event(event)
             self._btn_back.handle_event(event)
             return
 
-        # Toolbar-Buttons
+        # Fehlversuch-Overlay
+        if self._state == STATE_FAILED:
+            self._btn_fail_keep.handle_event(event)
+            self._btn_fail_reset.handle_event(event)
+            self._btn_back.handle_event(event)
+            if event.type == pygame.KEYDOWN:
+                if event.key in (pygame.K_z, pygame.K_RETURN, pygame.K_SPACE, pygame.K_e):
+                    self._on_edit_shapes()
+                elif event.key == pygame.K_r:
+                    self._on_reset()
+            return
+
+        # Hinweis schließen
+        if self._show_hint and event.type in (pygame.MOUSEBUTTONDOWN, pygame.KEYDOWN):
+            self._show_hint = False
+            return
+
         self._btn_back.handle_event(event)
         self._btn_hint.handle_event(event)
 
-        if self._state in (STATE_DRAWING, STATE_SIMULATING):
-            if self._state == STATE_DRAWING:
-                self._btn_start.handle_event(event)
+        if self._state == STATE_DRAWING:
+            self._btn_undo.handle_event(event)
             self._btn_reset.handle_event(event)
+            self._btn_start.handle_event(event)
 
-            # Hinweis schließen
-            if self._show_hint and event.type in (pygame.MOUSEBUTTONDOWN, pygame.KEYDOWN):
-                self._show_hint = False
-                return
+            # Tastatur-Kürzel
+            if event.type == pygame.KEYDOWN:
+                if (event.key == pygame.K_z and (event.mod & pygame.KMOD_CTRL)) or event.key == pygame.K_u:
+                    self._on_undo()
+                    return
+                elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
+                    self._on_start()
+                    return
+                elif event.key == pygame.K_r:
+                    self._on_reset()
+                    return
 
-            # Zeichnen (nur im Spielbereich)
+            # Zeichnen oder Verbindungspunkt lösen (nur im Spielbereich)
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if self._play_area.collidepoint(event.pos):
+                    # Verbindungspunkt lösen bei Klick darauf
+                    if self._world.remove_connection_point_at(event.pos, threshold=24.0):
+                        return
                     self._drawing.start(event.pos)
             elif event.type == pygame.MOUSEMOTION:
                 if self._drawing.is_drawing:
@@ -151,12 +209,24 @@ class PlayScene(BaseScene):
                         self._world.add_drawn_stroke(pts, color=(65, 58, 50))
                         self._stroke_count += 1
 
+        elif self._state == STATE_SIMULATING:
+            self._btn_edit.handle_event(event)
+            self._btn_sim_reset.handle_event(event)
+
+            # Tastatur-Kürzel
+            if event.type == pygame.KEYDOWN:
+                if event.key in (pygame.K_z, pygame.K_SPACE, pygame.K_RETURN, pygame.K_e):
+                    self._on_edit_shapes()
+                    return
+                elif event.key == pygame.K_r:
+                    self._on_reset()
+                    return
+
     # ------------------------------------------------------------------
     # Update
     # ------------------------------------------------------------------
 
     def update(self, dt: float) -> None:
-        # Buttons
         self._btn_back.update(dt)
         self._btn_hint.update(dt)
 
@@ -166,11 +236,21 @@ class PlayScene(BaseScene):
                 self._show_hint = False
 
         if self._state == STATE_DRAWING:
-            self._btn_start.update(dt)
+            self._btn_undo.update(dt)
             self._btn_reset.update(dt)
+            self._btn_start.update(dt)
+
+            # Hover über Verbindungspunkten prüfen
+            mx, my = pygame.mouse.get_pos()
+            if self._play_area.collidepoint((mx, my)) and self._world:
+                self._hovered_conn_point = self._world.get_connection_point_at((mx, my), threshold=24.0)
+            else:
+                self._hovered_conn_point = None
 
         elif self._state == STATE_SIMULATING:
-            self._btn_reset.update(dt)
+            self._hovered_conn_point = None
+            self._btn_edit.update(dt)
+            self._btn_sim_reset.update(dt)
             self._sim_time += dt
             self._world.step(dt)
 
@@ -181,16 +261,20 @@ class PlayScene(BaseScene):
                     self._on_success()
             else:
                 self._success_timer = 0.0
+                if self._check_failure(dt):
+                    self._state = STATE_FAILED
 
-            # Ball außerhalb (unter dem Boden) — Kein Fail, nur Reset-Hint
-            self._check_ball_oob()
+        elif self._state == STATE_FAILED:
+            self._hovered_conn_point = None
+            self._btn_fail_keep.update(dt)
+            self._btn_fail_reset.update(dt)
 
         elif self._state == STATE_SUCCESS:
+            self._hovered_conn_point = None
             self._success_tween.update(dt)
             self._star_reveal_timer += dt
             if self._btn_next:
                 self._btn_next.update(dt)
-            self._btn_back.update(dt)
 
     # ------------------------------------------------------------------
     # Draw
@@ -213,7 +297,7 @@ class PlayScene(BaseScene):
 
         # Physik-Welt zeichnen
         if self._world:
-            self._world.draw(surface)
+            self._world.draw(surface, hovered_conn_point=self._hovered_conn_point)
 
         # Aktueller Strich (Vorschau)
         self._drawing.draw_preview(surface)
@@ -225,29 +309,43 @@ class PlayScene(BaseScene):
         # Header
         self._draw_header(surface)
 
-        # Toolbar-Buttons
+        # Toolbar-Buttons je nach Zustand
+        self._btn_back.draw(surface)
+        self._btn_hint.draw(surface)
+
         if self._state == STATE_DRAWING:
+            self._btn_undo.draw(surface)
+            self._btn_reset.draw(surface)
             self._btn_start.draw(surface)
-            self._btn_reset.draw(surface)
+            # Info-Tipp: Klick auf Niete löst Verbindung
+            if any(s.connection_points for s in self._world.drawn_strokes):
+                font_info = get_font(FONT_SIZE_XS)
+                tip_surf = font_info.render("Tipp: Klicke auf rote Niete, um Verbindungen zu lösen", True, (160, 100, 90))
+                surface.blit(tip_surf, tip_surf.get_rect(midright=(WINDOW_WIDTH - 220, WINDOW_HEIGHT - self.TOOLBAR_H // 2)))
+
         elif self._state == STATE_SIMULATING:
-            self._btn_reset.draw(surface)
+            self._btn_edit.draw(surface)
+            self._btn_sim_reset.draw(surface)
             # "Physik läuft..." Anzeige
             font_sim = get_font(FONT_SIZE_SM)
             sim_surf = font_sim.render("Physik läuft...", True, COLOR_TEXT_LIGHT)
             surface.blit(sim_surf, sim_surf.get_rect(
-                center=(WINDOW_WIDTH // 2 - 120, WINDOW_HEIGHT - self.TOOLBAR_H // 2)
+                center=(WINDOW_WIDTH // 2 - 420, WINDOW_HEIGHT - self.TOOLBAR_H // 2)
             ))
-        self._btn_back.draw(surface)
-        self._btn_hint.draw(surface)
 
         # Strichanzahl
-        font_strokes = get_font(FONT_SIZE_SM)
-        sc_surf = font_strokes.render(f"Gezeichnete Striche: {self._stroke_count}", True, COLOR_TEXT_LIGHT)
-        surface.blit(sc_surf, sc_surf.get_rect(midleft=(WINDOW_WIDTH // 2 + 150, WINDOW_HEIGHT - self.TOOLBAR_H // 2)))
+        if self._state in (STATE_DRAWING, STATE_SIMULATING):
+            font_strokes = get_font(FONT_SIZE_SM)
+            sc_surf = font_strokes.render(f"Gezeichnete Striche: {self._stroke_count}", True, COLOR_TEXT_LIGHT)
+            surface.blit(sc_surf, sc_surf.get_rect(midleft=(WINDOW_WIDTH // 2 + 150, WINDOW_HEIGHT - self.TOOLBAR_H // 2)))
 
         # Hinweis-Overlay
         if self._show_hint:
             self._draw_hint_overlay(surface)
+
+        # Fehlversuch-Overlay
+        if self._state == STATE_FAILED:
+            self._draw_failed_overlay(surface)
 
         # Erfolgs-Overlay
         if self._state == STATE_SUCCESS:
@@ -333,6 +431,31 @@ class PlayScene(BaseScene):
         close_s = font_xs.render("Klicke irgendwo zum Schließen", True, COLOR_TEXT_LIGHT)
         surface.blit(close_s, close_s.get_rect(center=(cx, card_rect.bottom - 26)))
 
+    def _draw_failed_overlay(self, surface: pygame.Surface) -> None:
+        overlay = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 160))
+        surface.blit(overlay, (0, 0))
+
+        card_w, card_h = 740, 320
+        cx, cy = WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2
+        card_rect = pygame.Rect(cx - card_w // 2, cy - card_h // 2, card_w, card_h)
+        draw_rounded_rect(surface, COLOR_WHITE, card_rect, radius=26, shadow_offset=10)
+
+        font_title = get_font(FONT_SIZE_LG, bold=True)
+        t_surf = font_title.render("Versuch nicht geglückt", True, COLOR_CORAL)
+        surface.blit(t_surf, t_surf.get_rect(center=(cx, cy - 80)))
+
+        font_msg = get_font(FONT_SIZE_SM)
+        m1_surf = font_msg.render("Der Ball hat das Ziel verfehlt.", True, COLOR_TEXT)
+        surface.blit(m1_surf, m1_surf.get_rect(center=(cx, cy - 30)))
+
+        font_sub = get_font(FONT_SIZE_SM)
+        m2_surf = font_sub.render("Möchtest du die gezeichneten Formen anpassen oder ganz neu beginnen?", True, COLOR_TEXT_LIGHT)
+        surface.blit(m2_surf, m2_surf.get_rect(center=(cx, cy - 2)))
+
+        self._btn_fail_keep.draw(surface)
+        self._btn_fail_reset.draw(surface)
+
     def _draw_success_overlay(self, surface: pygame.Surface) -> None:
         scale = self._success_tween.value
 
@@ -390,17 +513,102 @@ class PlayScene(BaseScene):
         """Starte die Physik-Simulation."""
         if self._state != STATE_DRAWING:
             return
+        # Snapshot der gezeichneten Formen sichern, falls der Versuch scheitert
+        if self._world:
+            self._snapshot_strokes = [
+                {
+                    "points": list(s.points),
+                    "is_static": s.is_static,
+                    "connection_points": list(s.connection_points),
+                    "color": s.color,
+                }
+                for s in self._world.drawn_strokes
+            ]
         self._state = STATE_SIMULATING
         self._sim_time = 0.0
+        self._fail_timer = 0.0
+
+    def _on_undo(self) -> None:
+        """Macht den zuletzt gezeichneten Strich rückgängig."""
+        if self._state != STATE_DRAWING or not self._world:
+            return
+        removed = self._world.pop_drawn_stroke()
+        if removed:
+            self._stroke_count = max(0, self._stroke_count - 1)
+
+    def _on_edit_shapes(self) -> None:
+        """Setzt Bälle/Physik zurück und behält die gezeichneten Formen zum Weiterarbeiten bei."""
+        self._restore_snapshot_strokes()
 
     def _on_reset(self) -> None:
-        """Setzt gezeichnete Formen zurück (Bälle werden neu platziert)."""
+        """Setzt das Level komplett neu auf (alle Striche werden gelöscht)."""
+        self._snapshot_strokes = []
         self._reset_world()
 
     def _on_hint(self) -> None:
         self._show_hint = not self._show_hint
         if self._show_hint:
             self._hint_timer = 12.0
+
+    def _restore_snapshot_strokes(self) -> None:
+        """Stellt die gezeichneten Formen vor der Simulation wieder her."""
+        self._reset_world()
+        if not self._snapshot_strokes or not self._world:
+            return
+
+        from ..physics.world import DrawnStroke, SEGMENT_RADIUS, WALL_ELASTICITY, WALL_FRICTION, CTYPE_DRAWN
+        for stroke_data in self._snapshot_strokes:
+            pts = stroke_data["points"]
+            conn_pts = stroke_data["connection_points"]
+            is_static = stroke_data["is_static"]
+            color = stroke_data.get("color", (80, 70, 65))
+
+            if is_static and conn_pts:
+                body = pymunk.Body(body_type=pymunk.Body.STATIC)
+                segments = []
+                for i in range(len(pts) - 1):
+                    seg = pymunk.Segment(body, pts[i], pts[i + 1], SEGMENT_RADIUS)
+                    seg.elasticity = WALL_ELASTICITY
+                    seg.friction = WALL_FRICTION
+                    seg.collision_type = CTYPE_DRAWN
+                    segments.append(seg)
+                self._world.space.add(body, *segments)
+                self._world._level_static_shapes.extend(segments)
+                stroke = DrawnStroke(
+                    points=pts,
+                    segments=segments,
+                    body=body,
+                    color=color,
+                    is_static=True,
+                    connection_points=conn_pts,
+                )
+                self._world.drawn_strokes.append(stroke)
+            else:
+                self._world.add_drawn_stroke(pts, color=color)
+
+        self._stroke_count = len(self._world.drawn_strokes)
+
+    def _check_failure(self, dt: float) -> bool:
+        """Prüft, ob der Ball verloren gegangen ist oder die Bewegung erloschen ist."""
+        if not self._world or not self._world.balls:
+            return False
+
+        # 1. Ball außerhalb des sichtbaren Feldes
+        for ball in self._world.balls:
+            pos = ball.body.position
+            if pos.y > WINDOW_HEIGHT + 70 or pos.x < -120 or pos.x > WINDOW_WIDTH + 120:
+                return True
+
+        # 2. Wenn mindestens 3.5s simuliert wurden und alle Bälle stillstehen
+        if self._sim_time > 3.5:
+            all_stopped = all(b.body.velocity.length < 15.0 for b in self._world.balls)
+            if all_stopped and not self._level.check_victory(self._world, dt):
+                self._fail_timer += dt
+                if self._fail_timer >= 1.0:
+                    return True
+            else:
+                self._fail_timer = 0.0
+        return False
 
     def _on_success(self) -> None:
         if self._state == STATE_SUCCESS:

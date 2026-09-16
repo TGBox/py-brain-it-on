@@ -411,6 +411,76 @@ class PhysicsWorld:
         self.drawn_strokes.append(stroke)
         return stroke
 
+    def pop_drawn_stroke(self) -> Optional[DrawnStroke]:
+        """Entfernt den zuletzt gezeichneten Strich (Undo)."""
+        if not self.drawn_strokes:
+            return None
+        stroke = self.drawn_strokes.pop()
+        if stroke.body:
+            for seg in stroke.segments:
+                if seg in self.space.shapes:
+                    self.space.remove(seg)
+                if seg in self._level_static_shapes:
+                    self._level_static_shapes.remove(seg)
+            if stroke.body in self.space.bodies:
+                self.space.remove(stroke.body)
+        return stroke
+
+    def get_connection_point_at(self, pos: tuple[float, float], threshold: float = 24.0) -> Optional[tuple[float, float]]:
+        """Prüft, ob an der Position ein Verbindungspunkt liegt und gibt dessen Koordinaten zurück."""
+        target_v = pymunk.Vec2d(*pos)
+        for stroke in self.drawn_strokes:
+            if not stroke.is_static or not stroke.connection_points:
+                continue
+            for cx, cy in stroke.connection_points:
+                if target_v.get_distance(pymunk.Vec2d(cx, cy)) <= threshold:
+                    return (cx, cy)
+        return None
+
+    def remove_connection_point_at(self, pos: tuple[float, float], threshold: float = 24.0) -> bool:
+        """
+        Löst einen Verbindungspunkt an der angegebenen Klick-Position.
+        Sind alle Verbindungspunkte gelöst, wird der Strich automatisch zu einem dynamischen Physikobjekt.
+        """
+        target_v = pymunk.Vec2d(*pos)
+        for stroke in self.drawn_strokes:
+            if not stroke.is_static or not stroke.connection_points:
+                continue
+            for idx, (cx, cy) in enumerate(stroke.connection_points):
+                if target_v.get_distance(pymunk.Vec2d(cx, cy)) <= threshold:
+                    stroke.connection_points.pop(idx)
+                    if len(stroke.connection_points) == 0:
+                        self._convert_stroke_to_dynamic(stroke)
+                    return True
+        return False
+
+    def _convert_stroke_to_dynamic(self, stroke: DrawnStroke) -> None:
+        """Wandelt einen statisch verankerten Strich in ein dynamisches Physik-Objekt um."""
+        if stroke.body:
+            for seg in stroke.segments:
+                if seg in self.space.shapes:
+                    self.space.remove(seg)
+                if seg in self._level_static_shapes:
+                    self._level_static_shapes.remove(seg)
+            if stroke.body in self.space.bodies:
+                self.space.remove(stroke.body)
+
+        com, mass, moment, local_segs = self._compute_stroke_physics(stroke.points)
+        body = pymunk.Body(mass, moment, body_type=pymunk.Body.DYNAMIC)
+        body.position = (com.x, com.y)
+        segments = []
+        for p1_local, p2_local in local_segs:
+            seg = pymunk.Segment(body, p1_local, p2_local, SEGMENT_RADIUS)
+            seg.elasticity = 0.35
+            seg.friction = 0.7
+            seg.collision_type = CTYPE_DRAWN
+            segments.append(seg)
+        self.space.add(body, *segments)
+
+        stroke.body = body
+        stroke.segments = segments
+        stroke.is_static = False
+
     def remove_drawn_strokes(self) -> None:
         """Entfernt alle vom Spieler gezeichneten Linien."""
         for stroke in self.drawn_strokes:
@@ -464,7 +534,7 @@ class PhysicsWorld:
     # Rendering
     # ------------------------------------------------------------------
 
-    def draw(self, surface: pygame.Surface) -> None:
+    def draw(self, surface: pygame.Surface, hovered_conn_point: Optional[tuple[float, float]] = None) -> None:
         """Zeichnet alle Physik-Objekte auf die Surface."""
         # Statische Objekte
         for item_type, args, color in self._static_draw_items:
@@ -494,14 +564,27 @@ class PhysicsWorld:
             if stroke.is_static and stroke.connection_points:
                 for cx, cy in stroke.connection_points:
                     icx, icy = int(cx), int(cy)
-                    # Äußerer dunkler Ring
-                    pygame.draw.circle(surface, (45, 40, 35), (icx, icy), SEGMENT_RADIUS + 5)
-                    # Heller Metall-Ring
-                    pygame.draw.circle(surface, (230, 225, 215), (icx, icy), SEGMENT_RADIUS + 3)
-                    # Nietkopf
-                    pygame.draw.circle(surface, (115, 105, 95), (icx, icy), SEGMENT_RADIUS)
-                    # Glanzpunkt
-                    pygame.draw.circle(surface, (255, 255, 255), (icx - 1, icy - 1), 2)
+                    is_hovered = (
+                        hovered_conn_point is not None
+                        and pymunk.Vec2d(icx, icy).get_distance(pymunk.Vec2d(*hovered_conn_point)) < 6.0
+                    )
+                    if is_hovered:
+                        # Leuchtender orange-roter Warnring (Signal: Klick löst den Punkt)
+                        pygame.draw.circle(surface, (235, 75, 60), (icx, icy), SEGMENT_RADIUS + 8, 3)
+                        pygame.draw.circle(surface, (255, 230, 220), (icx, icy), SEGMENT_RADIUS + 4)
+                        pygame.draw.circle(surface, (200, 60, 50), (icx, icy), SEGMENT_RADIUS + 1)
+                        # Kleines weißes X
+                        pygame.draw.line(surface, (255, 255, 255), (icx - 4, icy - 4), (icx + 4, icy + 4), 2)
+                        pygame.draw.line(surface, (255, 255, 255), (icx - 4, icy + 4), (icx + 4, icy - 4), 2)
+                    else:
+                        # Äußerer dunkler Ring
+                        pygame.draw.circle(surface, (45, 40, 35), (icx, icy), SEGMENT_RADIUS + 5)
+                        # Heller Metall-Ring
+                        pygame.draw.circle(surface, (230, 225, 215), (icx, icy), SEGMENT_RADIUS + 3)
+                        # Nietkopf
+                        pygame.draw.circle(surface, (115, 105, 95), (icx, icy), SEGMENT_RADIUS)
+                        # Glanzpunkt
+                        pygame.draw.circle(surface, (255, 255, 255), (icx - 1, icy - 1), 2)
 
         # Dynamische Kästen / Säulen
         for dbox in self.dynamic_boxes:
