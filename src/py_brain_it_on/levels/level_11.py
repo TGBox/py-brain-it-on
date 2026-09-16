@@ -19,6 +19,10 @@ class Level11(BaseLevel):
     HINT = "Baue eine Wippe und lass ein massives Gewicht auf das andere Ende sausen."
     BG_COLOR = (246, 240, 248)
     STAR_THRESHOLDS = (1, 2)
+    SOLUTION_DESCRIPTION = "Katapult-Stoß: Ein schweres Gewicht saust auf die Wippe und schleudert den Ball hoch auf den Pfeiler."
+    SOLUTION_STROKES = [
+        [(380, 200), (460, 200), (460, 300), (380, 300), (380, 200)]
+    ]
 
     def setup(self, world: PhysicsWorld) -> None:
         W, H = WINDOW_WIDTH, WINDOW_HEIGHT
@@ -27,8 +31,10 @@ class Level11(BaseLevel):
         # Durchgehender Boden
         world.add_static_segment((0, floor_y), (W, floor_y), color=(140, 120, 100), radius=6)
 
-        # Ball links am Boden
-        world.add_ball((350, floor_y - 45), color=COLOR_CORAL)
+        # Wippe links für Katapult
+        world.add_static_segment((600, floor_y), (600, floor_y - 70), color=COLOR_PURPLE, radius=8)
+        world.add_dynamic_box((600, floor_y - 85), width=520, height=22, mass=4.0, color=(160, 110, 70))
+        world.add_ball((780, floor_y - 120), color=COLOR_CORAL)
 
         # Hoher Pfeiler rechts
         world.add_static_segment((1350, floor_y), (1350, 440), color=COLOR_PURPLE, radius=12)

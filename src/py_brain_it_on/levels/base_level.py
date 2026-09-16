@@ -27,6 +27,12 @@ class BaseLevel(ABC):
     HINT: str = "Zeichne eine Form, um die Aufgabe zu lösen."
     BG_COLOR: tuple = (245, 240, 230)
     STAR_THRESHOLDS: tuple[int, int] = (1, 3)
+    SOLUTION_DESCRIPTION: str = "Physikalische Musterlösung"
+    SOLUTION_STROKES: list[list[tuple[float, float]]] = []
+
+    def get_solution_strokes(self) -> list[list[tuple[float, float]]]:
+        """Gibt die vordefinierten Striche der Musterlösung zurück."""
+        return [list(s) for s in self.SOLUTION_STROKES]
 
     @abstractmethod
     def setup(self, world: "PhysicsWorld") -> None:

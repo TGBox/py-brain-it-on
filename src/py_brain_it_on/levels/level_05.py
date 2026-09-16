@@ -21,7 +21,12 @@ class Level05(BaseLevel):
     GOAL_DESCRIPTION = "Leite den Ball über die Stufen in den Eimer!"
     HINT = "Zeichne schräge Führungen, damit der Ball im Zickzack von Ebene zu Ebene rollt."
     BG_COLOR = (240, 248, 242)
-    STAR_THRESHOLDS = (1, 2)
+    STAR_THRESHOLDS = (2, 3)
+    SOLUTION_DESCRIPTION = "Kaskaden-Führung: Eine Rutsche leitet den Ball auf die mittlere Ebene, ein Abweiser lenkt ihn in den Eimer."
+    SOLUTION_STROKES = [
+        [(900, 180), (950, 240), (1050, 620)],
+        [(1630, 580), (1630, 700), (1580, 820)]
+    ]
 
     def setup(self, world: PhysicsWorld) -> None:
         W, H = WINDOW_WIDTH, WINDOW_HEIGHT

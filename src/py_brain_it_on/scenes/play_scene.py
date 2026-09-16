@@ -80,9 +80,12 @@ class PlayScene(BaseScene):
         self._star_display_stars = 0
         self._star_reveal_timer = 0.0
 
-        # Hinweis (unbegrenzt verfügbar)
+        # Hinweis & Musterlösung
         self._show_hint = False
         self._hint_timer = 0.0
+        self._failed_attempts: int = save_manager.get_failed_attempts(self.game.save_data, self.level_num)
+        self._show_solution_confirm: bool = False
+        self._solution_active: bool = False
 
         # Buttons (Toolbar)
         btn_y = WINDOW_HEIGHT - self.TOOLBAR_H + 18
@@ -118,20 +121,41 @@ class PlayScene(BaseScene):
             color=COLOR_YELLOW, font_size=FONT_SIZE_SM, on_click=self._on_hint,
         )
 
+        # Musterlösung Toolbar-Button (freigeschaltet nach mehreren Fehlversuchen)
+        self._btn_toolbar_solution = RoundedButton(
+            "Musterlösung", pygame.Rect(WINDOW_WIDTH - 425, btn_y, 210, 54),
+            color=(215, 145, 35), font_size=FONT_SIZE_SM, on_click=self._on_request_solution,
+        )
+
         # Dialog-Buttons für gescheiterten Versuch
         cx, cy = WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2
         self._btn_fail_keep = RoundedButton(
-            "Mit Formen weitermachen", pygame.Rect(cx - 330, cy + 45, 310, 56),
+            "Mit Formen weitermachen", pygame.Rect(cx - 320, cy + 30, 300, 54),
             color=COLOR_TEAL, font_size=FONT_SIZE_SM, on_click=self._on_edit_shapes,
         )
         self._btn_fail_reset = RoundedButton(
-            "Ganz neu beginnen", pygame.Rect(cx + 20, cy + 45, 290, 56),
+            "Ganz neu beginnen", pygame.Rect(cx + 20, cy + 30, 290, 54),
             color=COLOR_CORAL, font_size=FONT_SIZE_SM, on_click=self._on_reset,
+        )
+        self._btn_fail_solution = RoundedButton(
+            "Musterlösung ansehen...", pygame.Rect(cx - 190, cy + 100, 380, 54),
+            color=(215, 145, 35), font_size=FONT_SIZE_SM, on_click=self._on_request_solution,
+        )
+
+        # Bestätigungs-Dialog Buttons
+        self._btn_confirm_solution = RoundedButton(
+            "Ja, Lösung zeigen", pygame.Rect(cx - 260, cy + 85, 240, 56),
+            color=(215, 145, 35), font_size=FONT_SIZE_SM, on_click=self._apply_solution,
+        )
+        self._btn_cancel_solution = RoundedButton(
+            "Weiter probieren", pygame.Rect(cx + 20, cy + 85, 240, 56),
+            color=COLOR_TEAL, font_size=FONT_SIZE_SM, on_click=self._cancel_solution,
         )
 
         self._btn_next: RoundedButton | None = None
 
         self._reset_world()
+
 
     # ------------------------------------------------------------------
     # Scene-Lifecycle
@@ -148,6 +172,17 @@ class PlayScene(BaseScene):
     # ------------------------------------------------------------------
 
     def handle_event(self, event: pygame.event.Event) -> None:
+        # Bestätigungs-Dialog für Musterlösung (höchste Priorität)
+        if self._show_solution_confirm:
+            self._btn_confirm_solution.handle_event(event)
+            self._btn_cancel_solution.handle_event(event)
+            if event.type == pygame.KEYDOWN:
+                if event.key in (pygame.K_ESCAPE, pygame.K_n):
+                    self._cancel_solution()
+                elif event.key in (pygame.K_RETURN, pygame.K_SPACE, pygame.K_j, pygame.K_y):
+                    self._apply_solution()
+            return
+
         # Erfolgs-Overlay
         if self._state == STATE_SUCCESS:
             if self._btn_next:
@@ -159,12 +194,16 @@ class PlayScene(BaseScene):
         if self._state == STATE_FAILED:
             self._btn_fail_keep.handle_event(event)
             self._btn_fail_reset.handle_event(event)
+            if self._failed_attempts >= 2:
+                self._btn_fail_solution.handle_event(event)
             self._btn_back.handle_event(event)
             if event.type == pygame.KEYDOWN:
                 if event.key in (pygame.K_z, pygame.K_RETURN, pygame.K_SPACE, pygame.K_e):
                     self._on_edit_shapes()
                 elif event.key == pygame.K_r:
                     self._on_reset()
+                elif event.key in (pygame.K_m, pygame.K_l) and self._failed_attempts >= 2:
+                    self._on_request_solution()
             return
 
         # Hinweis schließen
@@ -179,6 +218,8 @@ class PlayScene(BaseScene):
             self._btn_undo.handle_event(event)
             self._btn_reset.handle_event(event)
             self._btn_start.handle_event(event)
+            if self._failed_attempts >= 2:
+                self._btn_toolbar_solution.handle_event(event)
 
             # Tastatur-Kürzel
             if event.type == pygame.KEYDOWN:
@@ -191,6 +232,10 @@ class PlayScene(BaseScene):
                 elif event.key == pygame.K_r:
                     self._on_reset()
                     return
+                elif event.key in (pygame.K_m, pygame.K_l) and self._failed_attempts >= 2:
+                    self._on_request_solution()
+                    return
+
 
             # Zeichnen oder Verbindungspunkt lösen (nur im Spielbereich)
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -227,6 +272,11 @@ class PlayScene(BaseScene):
     # ------------------------------------------------------------------
 
     def update(self, dt: float) -> None:
+        if self._show_solution_confirm:
+            self._btn_confirm_solution.update(dt)
+            self._btn_cancel_solution.update(dt)
+            return
+
         self._btn_back.update(dt)
         self._btn_hint.update(dt)
 
@@ -239,6 +289,8 @@ class PlayScene(BaseScene):
             self._btn_undo.update(dt)
             self._btn_reset.update(dt)
             self._btn_start.update(dt)
+            if self._failed_attempts >= 2:
+                self._btn_toolbar_solution.update(dt)
 
             # Hover über Verbindungspunkten prüfen
             mx, my = pygame.mouse.get_pos()
@@ -263,11 +315,14 @@ class PlayScene(BaseScene):
                 self._success_timer = 0.0
                 if self._check_failure(dt):
                     self._state = STATE_FAILED
+                    self._record_failure()
 
         elif self._state == STATE_FAILED:
             self._hovered_conn_point = None
             self._btn_fail_keep.update(dt)
             self._btn_fail_reset.update(dt)
+            if self._failed_attempts >= 2:
+                self._btn_fail_solution.update(dt)
 
         elif self._state == STATE_SUCCESS:
             self._hovered_conn_point = None
@@ -275,6 +330,7 @@ class PlayScene(BaseScene):
             self._star_reveal_timer += dt
             if self._btn_next:
                 self._btn_next.update(dt)
+
 
     # ------------------------------------------------------------------
     # Draw
@@ -302,6 +358,16 @@ class PlayScene(BaseScene):
         # Aktueller Strich (Vorschau)
         self._drawing.draw_preview(surface)
 
+        # Musterlösung-Banner (falls aktiv)
+        if self._solution_active:
+            banner_rect = pygame.Rect(100, self.HEADER_H + 12, WINDOW_WIDTH - 200, 48)
+            draw_rounded_rect(surface, (255, 248, 230), banner_rect, radius=12, border_color=(215, 155, 45), border_width=2)
+            font_banner = get_font(FONT_SIZE_XS, bold=True)
+            desc = getattr(self._level, "SOLUTION_DESCRIPTION", "Musterlösung geladen.")
+            b_text = f"Musterlösung: {desc}  •  Klicke 'Starten', um sie auszuführen!"
+            b_surf = font_banner.render(b_text, True, (160, 95, 20))
+            surface.blit(b_surf, b_surf.get_rect(center=banner_rect.center))
+
         # Toolbar-Hintergrund
         toolbar_rect = pygame.Rect(0, WINDOW_HEIGHT - self.TOOLBAR_H, WINDOW_WIDTH, self.TOOLBAR_H)
         pygame.draw.rect(surface, COLOR_WHITE, toolbar_rect)
@@ -317,11 +383,15 @@ class PlayScene(BaseScene):
             self._btn_undo.draw(surface)
             self._btn_reset.draw(surface)
             self._btn_start.draw(surface)
+            if self._failed_attempts >= 2:
+                self._btn_toolbar_solution.draw(surface)
+
             # Info-Tipp: Klick auf Niete löst Verbindung
             if any(s.connection_points for s in self._world.drawn_strokes):
                 font_info = get_font(FONT_SIZE_XS)
                 tip_surf = font_info.render("Tipp: Klicke auf rote Niete, um Verbindungen zu lösen", True, (160, 100, 90))
-                surface.blit(tip_surf, tip_surf.get_rect(midright=(WINDOW_WIDTH - 220, WINDOW_HEIGHT - self.TOOLBAR_H // 2)))
+                right_bound = WINDOW_WIDTH - 445 if self._failed_attempts >= 2 else WINDOW_WIDTH - 220
+                surface.blit(tip_surf, tip_surf.get_rect(midright=(right_bound, WINDOW_HEIGHT - self.TOOLBAR_H // 2)))
 
         elif self._state == STATE_SIMULATING:
             self._btn_edit.draw(surface)
@@ -350,6 +420,11 @@ class PlayScene(BaseScene):
         # Erfolgs-Overlay
         if self._state == STATE_SUCCESS:
             self._draw_success_overlay(surface)
+
+        # Bestätigungs-Dialog für Musterlösung (höchste Render-Ebene)
+        if self._show_solution_confirm:
+            self._draw_solution_confirm_dialog(surface)
+
 
     # ------------------------------------------------------------------
     # Interne Zeichenmethoden
@@ -436,25 +511,66 @@ class PlayScene(BaseScene):
         overlay.fill((0, 0, 0, 160))
         surface.blit(overlay, (0, 0))
 
-        card_w, card_h = 740, 320
+        has_solution = self._failed_attempts >= 2
+        card_w, card_h = 780, (410 if has_solution else 320)
         cx, cy = WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2
         card_rect = pygame.Rect(cx - card_w // 2, cy - card_h // 2, card_w, card_h)
         draw_rounded_rect(surface, COLOR_WHITE, card_rect, radius=26, shadow_offset=10)
 
         font_title = get_font(FONT_SIZE_LG, bold=True)
         t_surf = font_title.render("Versuch nicht geglückt", True, COLOR_CORAL)
-        surface.blit(t_surf, t_surf.get_rect(center=(cx, cy - 80)))
+        surface.blit(t_surf, t_surf.get_rect(center=(cx, cy - (125 if has_solution else 80))))
 
         font_msg = get_font(FONT_SIZE_SM)
-        m1_surf = font_msg.render("Der Ball hat das Ziel verfehlt.", True, COLOR_TEXT)
-        surface.blit(m1_surf, m1_surf.get_rect(center=(cx, cy - 30)))
+        m1_surf = font_msg.render("Der Ball hat das Ziel nicht erreicht.", True, COLOR_TEXT)
+        surface.blit(m1_surf, m1_surf.get_rect(center=(cx, cy - (75 if has_solution else 30))))
 
         font_sub = get_font(FONT_SIZE_SM)
-        m2_surf = font_sub.render("Möchtest du die gezeichneten Formen anpassen oder ganz neu beginnen?", True, COLOR_TEXT_LIGHT)
-        surface.blit(m2_surf, m2_surf.get_rect(center=(cx, cy - 2)))
+        sub_text = (
+            "Möchtest du die Formen anpassen, neu beginnen oder die Musterlösung ansehen?"
+            if has_solution else
+            "Möchtest du die gezeichneten Formen anpassen oder ganz neu beginnen?"
+        )
+        m2_surf = font_sub.render(sub_text, True, COLOR_TEXT_LIGHT)
+        surface.blit(m2_surf, m2_surf.get_rect(center=(cx, cy - (40 if has_solution else 2))))
 
+        btn_y1 = cy + (15 if has_solution else 45)
+        self._btn_fail_keep.rect.center = (cx - 165, btn_y1)
+        self._btn_fail_reset.rect.center = (cx + 165, btn_y1)
         self._btn_fail_keep.draw(surface)
         self._btn_fail_reset.draw(surface)
+
+        if has_solution:
+            self._btn_fail_solution.rect.center = (cx, cy + 95)
+            self._btn_fail_solution.draw(surface)
+
+    def _draw_solution_confirm_dialog(self, surface: pygame.Surface) -> None:
+        overlay = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 180))
+        surface.blit(overlay, (0, 0))
+
+        card_w, card_h = 760, 360
+        cx, cy = WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2
+        card_rect = pygame.Rect(cx - card_w // 2, cy - card_h // 2, card_w, card_h)
+        draw_rounded_rect(surface, COLOR_WHITE, card_rect, radius=26, shadow_offset=12)
+
+        font_title = get_font(FONT_SIZE_LG, bold=True)
+        t_surf = font_title.render("Musterlösung anzeigen?", True, (215, 145, 35))
+        surface.blit(t_surf, t_surf.get_rect(center=(cx, cy - 100)))
+
+        font_msg = get_font(FONT_SIZE_SM)
+        m1_surf = font_msg.render("Möchtest du dir die Musterlösung für dieses Level ansehen?", True, COLOR_TEXT)
+        surface.blit(m1_surf, m1_surf.get_rect(center=(cx, cy - 45)))
+
+        font_sub = get_font(FONT_SIZE_XS)
+        m2_surf = font_sub.render("Das selbstständige Lösen macht am meisten Spaß,", True, COLOR_TEXT_LIGHT)
+        m3_surf = font_sub.render("aber die Musterlösung zeigt dir einen zuverlässigen physikalischen Lösungsweg.", True, COLOR_TEXT_LIGHT)
+        surface.blit(m2_surf, m2_surf.get_rect(center=(cx, cy - 15)))
+        surface.blit(m3_surf, m3_surf.get_rect(center=(cx, cy + 10)))
+
+        self._btn_confirm_solution.draw(surface)
+        self._btn_cancel_solution.draw(surface)
+
 
     def _draw_success_overlay(self, surface: pygame.Surface) -> None:
         scale = self._success_tween.value
@@ -538,17 +654,57 @@ class PlayScene(BaseScene):
 
     def _on_edit_shapes(self) -> None:
         """Setzt Bälle/Physik zurück und behält die gezeichneten Formen zum Weiterarbeiten bei."""
+        if self._state == STATE_SIMULATING and self._sim_time >= 1.5:
+            self._record_failure()
         self._restore_snapshot_strokes()
 
     def _on_reset(self) -> None:
         """Setzt das Level komplett neu auf (alle Striche werden gelöscht)."""
+        if self._state == STATE_SIMULATING and self._sim_time >= 1.5:
+            self._record_failure()
         self._snapshot_strokes = []
+        self._solution_active = False
         self._reset_world()
 
     def _on_hint(self) -> None:
         self._show_hint = not self._show_hint
         if self._show_hint:
             self._hint_timer = 12.0
+
+    def _record_failure(self) -> None:
+        """Zählt einen Fehlversuch und speichert diesen ab."""
+        self._failed_attempts = save_manager.record_failure(self.game.save_data, self.level_num)
+
+    def _on_request_solution(self) -> None:
+        """Öffnet den Bestätigungs-Dialog für die Musterlösung."""
+        self._show_solution_confirm = True
+
+    def _cancel_solution(self) -> None:
+        """Schließt den Bestätigungs-Dialog ohne die Lösung zu laden."""
+        self._show_solution_confirm = False
+
+    def _apply_solution(self) -> None:
+        """Lädt die Musterlösung für das aktuelle Level und bereitet sie zum Ausführen vor."""
+        self._show_solution_confirm = False
+        self._reset_world()
+        self._solution_active = True
+        strokes = self._level.get_solution_strokes()
+        if self._world and strokes:
+            for st in strokes:
+                # Musterlösung erhält edle Bernstein/Gold-Färbung
+                self._world.add_drawn_stroke(st, color=(205, 140, 30))
+            self._stroke_count = len(self._world.drawn_strokes)
+            self._snapshot_strokes = [
+                {
+                    "points": list(s.points),
+                    "is_static": s.is_static,
+                    "connection_points": list(s.connection_points),
+                    "color": s.color,
+                }
+                for s in self._world.drawn_strokes
+            ]
+        self._state = STATE_DRAWING
+
 
     def _restore_snapshot_strokes(self) -> None:
         """Stellt die gezeichneten Formen vor der Simulation wieder her."""
@@ -614,8 +770,10 @@ class PlayScene(BaseScene):
         if self._state == STATE_SUCCESS:
             return
         self._state = STATE_SUCCESS
+        self._solution_active = False
         self._success_tween = Tween(0, 1, 0.55, ease_out_bounce)
         self._star_reveal_timer = 0.0
+
 
         # Sternebewertung
         thresh = getattr(self._level, "STAR_THRESHOLDS", (1, 3))

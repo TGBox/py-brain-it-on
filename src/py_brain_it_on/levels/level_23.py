@@ -17,7 +17,12 @@ class Level23(BaseLevel):
     GOAL_DESCRIPTION = "Lass die Bälle kollidieren und einen in den Eimer rollen!"
     HINT = "Bringe beide Bälle über dem Eimer zum Zusammenprall, damit der Abpraller direkt in den Eimer fällt."
     BG_COLOR = (242, 246, 252)
-    STAR_THRESHOLDS = (1, 2)
+    STAR_THRESHOLDS = (2, 3)
+    SOLUTION_DESCRIPTION = "Zwei gekreuzte Rutschen führen beide Bälle direkt über dem Eimer zusammen, wo sie zusammenstoßen und hineinfallen."
+    SOLUTION_STROKES = [
+        [(250, 200), (300, 310), (920, 830)],
+        [(1670, 250), (1620, 310), (960, 720)]
+    ]
 
     def setup(self, world: PhysicsWorld) -> None:
         W, H = WINDOW_WIDTH, WINDOW_HEIGHT

@@ -18,7 +18,12 @@ class Level24(BaseLevel):
     GOAL_DESCRIPTION = "Schleudere den Ball über die Riesenmauer in den Eimer!"
     HINT = "Lass ein sehr großes, schweres Gewicht aus großer Höhe auf die linke Seite der Wippe knallen."
     BG_COLOR = (246, 242, 238)
-    STAR_THRESHOLDS = (1, 2)
+    STAR_THRESHOLDS = (2, 3)
+    SOLUTION_DESCRIPTION = "Ein Lenkbalken zentriert den Flug und ein massiver Block hämmert auf die Wippe, um den Ball über die Riesenmauer zu schleudern."
+    SOLUTION_STROKES = [
+        [(720, 180), (840, 260)],
+        [(200, 30), (340, 30), (340, 210), (200, 210), (200, 30), (340, 120), (200, 120)]
+    ]
 
     def setup(self, world: PhysicsWorld) -> None:
         W, H = WINDOW_WIDTH, WINDOW_HEIGHT

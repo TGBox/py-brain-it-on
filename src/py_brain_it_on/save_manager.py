@@ -64,6 +64,22 @@ def save_level_result(data: dict, level: int, stars: int) -> dict:
     return data
 
 
+def record_failure(data: dict, level: int) -> int:
+    """Registriert einen Fehlversuch für das Level und speichert."""
+    key = str(level)
+    lvl_info = data.setdefault("levels", {}).setdefault(key, {"stars": 0, "solved": False})
+    lvl_info["failed_attempts"] = lvl_info.get("failed_attempts", 0) + 1
+    save(data)
+    return lvl_info["failed_attempts"]
+
+
+def get_failed_attempts(data: dict, level: int) -> int:
+    """Gibt die bisherigen Fehlversuche für das Level zurück."""
+    key = str(level)
+    return data.get("levels", {}).get(key, {}).get("failed_attempts", 0)
+
+
+
 def reset() -> dict:
     """Setzt den gesamten Spielfortschritt zurück und speichert den Ausgangszustand."""
     fresh = _deep_copy(_DEFAULT_SAVE)

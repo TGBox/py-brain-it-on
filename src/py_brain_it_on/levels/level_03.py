@@ -17,8 +17,12 @@ class Level03(BaseLevel):
     TITLE = "Der Trichter"
     GOAL_DESCRIPTION = "Fange den fallenden Ball mit einem Trichter auf!"
     HINT = "Zeichne zwei schräge Linien wie ein V über dem Eimer, um den fallenden Ball aufzufangen."
-    BG_COLOR = (242, 238, 250)
+    BG_COLOR = (244, 246, 240)
     STAR_THRESHOLDS = (1, 2)
+    SOLUTION_DESCRIPTION = "Trichter-Form: Ein V-förmiger Trichter über dem Eimer fängt den fallenden Ball auf."
+    SOLUTION_STROKES = [
+        [(720, 280), (940, 750), (980, 750), (1180, 280)]
+    ]
 
     def setup(self, world: PhysicsWorld) -> None:
         W, H = WINDOW_WIDTH, WINDOW_HEIGHT

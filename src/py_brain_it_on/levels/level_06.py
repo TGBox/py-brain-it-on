@@ -18,21 +18,26 @@ class Level06(BaseLevel):
     HINT = "Baue eine tragfähige Brücke über den Abgrund oder katapultiere den Ball hinüber."
     BG_COLOR = (244, 240, 234)
     STAR_THRESHOLDS = (1, 2)
+    SOLUTION_DESCRIPTION = "Schlucht-Brücke: Eine lange Brücke von der Klippe über den Abgrund direkt in den Eimer."
+    SOLUTION_STROKES = [
+        [(240, 390), (290, 455), (600, 490), (1350, 580), (1550, 595)]
+    ]
 
     def setup(self, world: PhysicsWorld) -> None:
         W, H = WINDOW_WIDTH, WINDOW_HEIGHT
-        cliff_y = 720
+        left_cliff_y = 460
+        right_cliff_y = 720
 
-        # Linke Klippe
-        world.add_static_segment((0, cliff_y), (650, cliff_y), color=(130, 115, 95), radius=8)
-        world.add_static_segment((650, cliff_y), (650, H), color=(130, 115, 95), radius=8)
+        # Linke Klippe (erhöht)
+        world.add_static_segment((0, left_cliff_y), (550, left_cliff_y), color=(130, 115, 95), radius=8)
+        world.add_static_segment((550, left_cliff_y), (550, H), color=(130, 115, 95), radius=8)
 
         # Ball auf linker Klippe
-        world.add_ball((300, cliff_y - 45), color=COLOR_CORAL)
+        world.add_ball((300, left_cliff_y - 45), color=COLOR_CORAL)
 
         # Rechte Klippe
-        world.add_static_segment((1250, cliff_y), (W, cliff_y), color=(130, 115, 95), radius=8)
-        world.add_static_segment((1250, cliff_y), (1250, H), color=(130, 115, 95), radius=8)
+        world.add_static_segment((1350, right_cliff_y), (W, right_cliff_y), color=(130, 115, 95), radius=8)
+        world.add_static_segment((1350, right_cliff_y), (1350, H), color=(130, 115, 95), radius=8)
 
         # Eimer auf rechter Klippe
-        world.add_bucket((1600, cliff_y), width=150, height=120, color=COLOR_TEAL)
+        world.add_bucket((1600, right_cliff_y), width=150, height=120, color=COLOR_TEAL)

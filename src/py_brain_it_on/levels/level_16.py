@@ -19,6 +19,10 @@ class Level16(BaseLevel):
     HINT = "Zeichne eine durchgehende geschwungene Linie, die über die Pfeiler gleitet."
     BG_COLOR = (240, 246, 244)
     STAR_THRESHOLDS = (1, 2)
+    SOLUTION_DESCRIPTION = "Durchgehende Brücke: Ein geschwungener Steg über alle Inseln mit integriertem Brems-Stopper am Eimer."
+    SOLUTION_STROKES = [
+        [(240, 280), (280, 370), (550, 440), (800, 500), (1050, 560), (1300, 600), (1500, 640), (1630, 660), (1660, 720), (1720, 720), (1740, 500)]
+    ]
 
     def setup(self, world: PhysicsWorld) -> None:
         W, H = WINDOW_WIDTH, WINDOW_HEIGHT

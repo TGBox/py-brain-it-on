@@ -18,6 +18,10 @@ class Level13(BaseLevel):
     HINT = "Gib dem Ball auf der Rampe genug Schwung oder zeichne eine Schanze, die genau auf die Öffnung zielt."
     BG_COLOR = (244, 240, 248)
     STAR_THRESHOLDS = (1, 2)
+    SOLUTION_DESCRIPTION = "Präzisions-Schanze: Eine Rampe zielt genau durch das Wandfenster direkt in den Eimer."
+    SOLUTION_STROKES = [
+        [(520, 480), (1050, 620), (1530, 850)]
+    ]
 
     def setup(self, world: PhysicsWorld) -> None:
         W, H = WINDOW_WIDTH, WINDOW_HEIGHT

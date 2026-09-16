@@ -18,7 +18,13 @@ class Level25(BaseLevel):
     GOAL_DESCRIPTION = "Stürze die Säule um und versenke beide Bälle im Eimer!"
     HINT = "Bringe die Mittelsäule zum Umfallen und baue zwei Rutschen, die beide Bälle in den Eimer leiten."
     BG_COLOR = (246, 240, 235)
-    STAR_THRESHOLDS = (1, 3)
+    STAR_THRESHOLDS = (3, 4)
+    SOLUTION_DESCRIPTION = "Ein herabstürzender Block stürzt die Säule um, während zwei präzise Rutschen beide Bälle zeitgleich in den zentralen Eimer leiten."
+    SOLUTION_STROKES = [
+        [(585, 100), (650, 100), (650, 250), (585, 250), (585, 100)],
+        [(220, 180), (280, 280), (700, 480), (900, 780)],
+        [(1700, 180), (1640, 280), (1350, 520), (1020, 780)]
+    ]
 
     def setup(self, world: PhysicsWorld) -> None:
         W, H = WINDOW_WIDTH, WINDOW_HEIGHT
@@ -32,9 +38,9 @@ class Level25(BaseLevel):
         world.add_static_segment((W - 450, 320), (W - 120, 320), color=(140, 120, 100), radius=6)
         world.add_ball((W - 280, 270), color=COLOR_BLUE)
 
-        # Mittelsockel mit hoher Säule
-        world.add_static_segment((800, 680), (1120, 680), color=(140, 120, 100), radius=8)
-        world.add_dynamic_pillar((960, 490), width=45, height=380, mass=3.5, color=(220, 90, 60))
+        # Sockel mit hoher Säule
+        world.add_static_segment((460, 680), (660, 680), color=(140, 120, 100), radius=8)
+        world.add_dynamic_pillar((560, 490), width=45, height=380, mass=3.5, color=(220, 90, 60))
 
         # Großer Ziel-Eimer unten in der Mitte
         world.add_bucket((W // 2, floor_y), width=220, height=130, color=COLOR_TEAL)
@@ -42,6 +48,7 @@ class Level25(BaseLevel):
         # Boden links und rechts
         world.add_static_segment((0, floor_y), (W // 2 - 130, floor_y), color=(140, 120, 100), radius=6)
         world.add_static_segment((W // 2 + 130, floor_y), (W, floor_y), color=(140, 120, 100), radius=6)
+
 
     def check_victory(self, world: PhysicsWorld, dt: float = 0.0) -> bool:
         if not world.dynamic_boxes:

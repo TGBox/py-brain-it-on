@@ -18,7 +18,12 @@ class Level04(BaseLevel):
     GOAL_DESCRIPTION = "Bringe beide Bälle in den zentralen Eimer!"
     HINT = "Beide Bälle müssen in den Eimer. Zeichne zwei koordinierte Rampen oder eine große Y-Schale."
     BG_COLOR = (238, 244, 252)
-    STAR_THRESHOLDS = (1, 2)
+    STAR_THRESHOLDS = (2, 3)
+    SOLUTION_DESCRIPTION = "Duale Rampen: Zwei koordinierte Rutschen leiten beide Bälle zeitversetzt in den zentralen Eimer."
+    SOLUTION_STROKES = [
+        [(220, 260), (280, 370), (880, 800)],
+        [(1700, 310), (1640, 370), (1200, 700), (1030, 800)]
+    ]
 
     def setup(self, world: PhysicsWorld) -> None:
         W, H = WINDOW_WIDTH, WINDOW_HEIGHT

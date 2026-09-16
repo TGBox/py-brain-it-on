@@ -18,6 +18,10 @@ class Level22(BaseLevel):
     HINT = "Kippe die erste rote Säule nach rechts, damit sie die blaue Säule mitreißt."
     BG_COLOR = (248, 244, 240)
     STAR_THRESHOLDS = (1, 2)
+    SOLUTION_DESCRIPTION = "Ein herabstürzendes Gewicht bringt die rote Säule zum Kippen, die wiederum wie ein Domino die blaue Säule umwirft."
+    SOLUTION_STROKES = [
+        [(680, 200), (740, 200), (740, 350), (680, 350), (680, 200)]
+    ]
 
     def setup(self, world: PhysicsWorld) -> None:
         W, H = WINDOW_WIDTH, WINDOW_HEIGHT

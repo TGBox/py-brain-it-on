@@ -108,9 +108,77 @@ def test_reset_and_connections():
     assert len(air_stroke.connection_points) == 0
 
 
+def test_reference_solutions():
+    """Prüft, dass alle 25 Level eine Musterlösung besitzen und diese physikalisch gewinnt."""
+    for i in range(1, TOTAL_LEVELS + 1):
+        mod_name = f"py_brain_it_on.levels.level_{i:02d}"
+        cls_name = f"Level{i:02d}"
+        mod = sys.modules[mod_name]
+        cls = getattr(mod, cls_name)
+        level = cls()
+
+        assert hasattr(level, "SOLUTION_DESCRIPTION") and len(level.SOLUTION_DESCRIPTION) > 0, (
+            f"Level {i} fehlt SOLUTION_DESCRIPTION"
+        )
+        strokes = level.get_solution_strokes()
+        assert len(strokes) > 0, f"Level {i} hat keine SOLUTION_STROKES"
+
+        world = PhysicsWorld()
+        level.setup(world)
+        for st in strokes:
+            world.add_drawn_stroke(st)
+
+        won = False
+        for step in range(500):
+            world.step(1.0 / 60.0)
+            if level.check_victory(world, 1.0 / 60.0):
+                won = True
+                break
+        assert won, f"Level {i:02d} ({level.TITLE}) Musterlösung gewinnt die Physiksimulation nicht!"
+
+
+def test_musterloesung_flow():
+    """Testet das Freischalten und Anwenden der Musterlösung nach Fehlversuchen."""
+    from py_brain_it_on import save_manager
+    game = Game()
+    # Level 1 PlayScene mit 0 Fehlversuchen
+    save_manager.reset()
+    play = PlayScene(game, 1)
+    assert play._failed_attempts == 0
+    assert not play._show_solution_confirm
+
+    # Nach 2 Fehlversuchen wird die Musterlösung freigeschaltet
+    play._record_failure()
+    assert play._failed_attempts == 1
+    play._record_failure()
+    assert play._failed_attempts == 2
+
+    # Klick auf Musterlösung öffnet Bestätigungsdialog
+    play._on_request_solution()
+    assert play._show_solution_confirm
+
+    # Abbrechen
+    play._cancel_solution()
+    assert not play._show_solution_confirm
+
+    # Erneut öffnen und bestätigen
+    play._on_request_solution()
+    play._apply_solution()
+    assert not play._show_solution_confirm
+    assert play._solution_active
+    assert play._stroke_count > 0
+
+    # Starten der Musterlösung
+    play._on_start()
+    assert play._state == "simulating"
+
+
 if __name__ == "__main__":
     test_levels()
     test_scenes()
     test_dynamic_stroke_physics()
     test_reset_and_connections()
+    test_reference_solutions()
+    test_musterloesung_flow()
     print("All tests passed!")
+

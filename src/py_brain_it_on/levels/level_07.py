@@ -19,23 +19,23 @@ class Level07(BaseLevel):
     HINT = "Lass ein schweres Objekt oder einen Keil auf den Ball fallen, um ihn herauszukatapultieren."
     BG_COLOR = (242, 246, 250)
     STAR_THRESHOLDS = (1, 2)
+    SOLUTION_DESCRIPTION = "Flipper-Katapult: Ein fallendes Gewicht trifft die Wippe und katapultiert den Ball auf das Podest."
+    SOLUTION_STROKES = [
+        [(380, 200), (460, 200), (460, 300), (380, 300), (380, 200)]
+    ]
 
     def setup(self, world: PhysicsWorld) -> None:
         W, H = WINDOW_WIDTH, WINDOW_HEIGHT
         floor_y = H - 90
 
-        # Boden links und Mitte
-        world.add_static_segment((0, floor_y), (350, floor_y), color=(140, 120, 100), radius=6)
+        # Durchgehender Boden
+        world.add_static_segment((0, floor_y), (W, floor_y), color=(140, 120, 100), radius=6)
 
-        # Nische für den Ball
-        world.add_static_segment((350, floor_y), (350, floor_y - 280), color=COLOR_PURPLE, radius=8)
-        world.add_static_segment((650, floor_y), (650, floor_y - 180), color=COLOR_PURPLE, radius=8)
-        world.add_static_segment((350, floor_y), (650, floor_y), color=(140, 120, 100), radius=6)
-        world.add_ball((500, floor_y - 50), color=COLOR_CORAL)
-
-        # Restlicher Boden
-        world.add_static_segment((650, floor_y), (W, floor_y), color=(140, 120, 100), radius=6)
+        # Flipper-Katapult: Drehpunkt und Wippe
+        world.add_static_segment((600, floor_y), (600, floor_y - 70), color=COLOR_PURPLE, radius=8)
+        world.add_dynamic_box((600, floor_y - 85), width=520, height=22, mass=4.0, color=(160, 110, 70))
+        world.add_ball((780, floor_y - 120), color=COLOR_CORAL)
 
         # Erhöhtes Podest rechts für den Eimer
-        world.add_static_segment((1280, 520), (1750, 520), color=(140, 120, 100), radius=6)
-        world.add_bucket((1520, 520), width=150, height=120, color=COLOR_TEAL)
+        world.add_static_segment((1200, 440), (1500, 440), color=(140, 120, 100), radius=6)
+        world.add_bucket((1350, 440), width=150, height=120, color=COLOR_TEAL)

@@ -22,6 +22,10 @@ class Level01(BaseLevel):
     HINT = "Zeichne eine schräge Rampe von der Plattform hinab zum Eimer."
     BG_COLOR = (248, 243, 235)
     STAR_THRESHOLDS = (1, 2)
+    SOLUTION_DESCRIPTION = "Geschwungene Rutschbahn von der Plattform direkt in den Eimer."
+    SOLUTION_STROKES = [
+        [(250, 260), (310, 360), (800, 520), (1400, 710), (1540, 750)]
+    ]
 
     def setup(self, world: PhysicsWorld) -> None:
         W, H = WINDOW_WIDTH, WINDOW_HEIGHT

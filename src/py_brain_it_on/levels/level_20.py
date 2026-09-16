@@ -18,6 +18,10 @@ class Level20(BaseLevel):
     HINT = "Zeichne Rampen, die beide Bälle zur gleichen Zeit in die Mitte aufeinander zu rasen lassen."
     BG_COLOR = (240, 244, 252)
     STAR_THRESHOLDS = (1, 2)
+    SOLUTION_DESCRIPTION = "Eine geschwungene Brücke verbindet beide Rampenenden und führt die Bälle zum frontalen Zusammenstoß."
+    SOLUTION_STROKES = [
+        [(530, 580), (960, 620), (1390, 580)]
+    ]
 
     def setup(self, world: PhysicsWorld) -> None:
         W, H = WINDOW_WIDTH, WINDOW_HEIGHT

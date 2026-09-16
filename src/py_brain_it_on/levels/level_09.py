@@ -19,6 +19,10 @@ class Level09(BaseLevel):
     HINT = "Bringe den Kasten oben links mit einer gezeichneten Form zu Fall, damit er auf eine Rampe oder den Ball prallt."
     BG_COLOR = (245, 242, 236)
     STAR_THRESHOLDS = (1, 2)
+    SOLUTION_DESCRIPTION = "Rollen-Transfer: Eine Rutsche von der Kiste leitet den Ball zielsicher in den Eimer."
+    SOLUTION_STROKES = [
+        [(880, 520), (940, 610), (1200, 720), (1530, 850)]
+    ]
 
     def setup(self, world: PhysicsWorld) -> None:
         W, H = WINDOW_WIDTH, WINDOW_HEIGHT

@@ -18,7 +18,12 @@ class Level15(BaseLevel):
     GOAL_DESCRIPTION = "Befördere die Bälle in die beiden getrennten Eimer!"
     HINT = "Zeichne ein umgekehrtes V (Keil) zwischen die Bälle, damit einer nach links und einer nach rechts rollt."
     BG_COLOR = (242, 245, 252)
-    STAR_THRESHOLDS = (1, 2)
+    STAR_THRESHOLDS = (2, 3)
+    SOLUTION_DESCRIPTION = "Gabelungs-Rampen: Zwei getrennte Rutschen teilen die beiden Bälle nach links und rechts auf."
+    SOLUTION_STROKES = [
+        [(950, 150), (880, 250), (340, 850)],
+        [(970, 150), (1040, 250), (1580, 850)]
+    ]
 
     def setup(self, world: PhysicsWorld) -> None:
         W, H = WINDOW_WIDTH, WINDOW_HEIGHT

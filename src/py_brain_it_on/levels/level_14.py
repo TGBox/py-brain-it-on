@@ -18,6 +18,10 @@ class Level14(BaseLevel):
     HINT = "Leite den Ball auf die linke Seite der Wippe oder beschwere die rechte Seite mit einem Gewicht."
     BG_COLOR = (244, 248, 240)
     STAR_THRESHOLDS = (1, 2)
+    SOLUTION_DESCRIPTION = "Direkte Hängebrücke: Eine durchgehende Rutsche über die Wippe hinweg direkt in den Eimer."
+    SOLUTION_STROKES = [
+        [(230, 240), (280, 320), (700, 500), (1200, 700), (1530, 850)]
+    ]
 
     def setup(self, world: PhysicsWorld) -> None:
         W, H = WINDOW_WIDTH, WINDOW_HEIGHT

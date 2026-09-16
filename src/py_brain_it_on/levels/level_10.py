@@ -20,7 +20,13 @@ class Level10(BaseLevel):
     GOAL_DESCRIPTION = "Bringe alle drei Bälle in den großen Eimer!"
     HINT = "Zeichne eine breite Trichterschale, die von außen alle drei Bälle zur Mitte leitet."
     BG_COLOR = (244, 246, 252)
-    STAR_THRESHOLDS = (1, 2)
+    STAR_THRESHOLDS = (2, 3)
+    SOLUTION_DESCRIPTION = "Dreifach-Trichter: Zwei Außen-Rampen und ein zentraler Keil führen alle drei Bälle zusammen in den Eimer."
+    SOLUTION_STROKES = [
+        [(240, 220), (300, 310), (900, 780)],
+        [(1680, 220), (1620, 310), (1020, 780)],
+        [(940, 150), (960, 230), (980, 150)]
+    ]
 
     def setup(self, world: PhysicsWorld) -> None:
         W, H = WINDOW_WIDTH, WINDOW_HEIGHT

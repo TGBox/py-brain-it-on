@@ -66,8 +66,10 @@ def draw_rounded_rect(
     radius: int = 16,
     shadow_offset: int = 4,
     shadow_color: tuple = (0, 0, 0, 50),
+    border_color: Optional[tuple] = None,
+    border_width: int = 0,
 ) -> None:
-    """Zeichnet ein abgerundetes Rechteck mit optionalem Schatten."""
+    """Zeichnet ein abgerundetes Rechteck mit optionalem Schatten und Rahmen."""
     # Schatten
     if shadow_offset > 0:
         shadow_surf = pygame.Surface(
@@ -79,6 +81,10 @@ def draw_rounded_rect(
         surface.blit(shadow_surf, (rect.x - shadow_offset, rect.y - shadow_offset))
     # Hauptform
     pygame.draw.rect(surface, color, rect, border_radius=radius)
+    # Optionaler Rahmen
+    if border_color and border_width > 0:
+        pygame.draw.rect(surface, border_color, rect, width=border_width, border_radius=radius)
+
 
 
 def draw_text_centered(

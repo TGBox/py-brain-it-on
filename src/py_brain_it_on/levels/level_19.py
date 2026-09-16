@@ -19,6 +19,10 @@ class Level19(BaseLevel):
     HINT = "Lass ein schweres Gewicht von oben seitlich gegen die Säule krachen oder baue einen massiven Pendelarm."
     BG_COLOR = (248, 240, 236)
     STAR_THRESHOLDS = (1, 2)
+    SOLUTION_DESCRIPTION = "Ein schwerer fallender Block links der Säulenspitze bringt den Turm augenblicklich zum Einsturz."
+    SOLUTION_STROKES = [
+        [(880, 150), (940, 150), (940, 300), (880, 300), (880, 150)]
+    ]
 
     def setup(self, world: PhysicsWorld) -> None:
         W, H = WINDOW_WIDTH, WINDOW_HEIGHT

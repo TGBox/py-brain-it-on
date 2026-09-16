@@ -19,6 +19,10 @@ class Level02(BaseLevel):
     HINT = "Nutze einen Hebel oder ein fallendes Gewicht, um den Ball über die Wand zu katapultieren."
     BG_COLOR = (245, 240, 232)
     STAR_THRESHOLDS = (1, 2)
+    SOLUTION_DESCRIPTION = "Bogenbrücke: Ein einzelner geschwungener Bogen von der Plattform über die Mauer in den Eimer."
+    SOLUTION_STROKES = [
+        [(240, 380), (280, 470), (600, 500), (960, 525), (1300, 680), (1530, 850)]
+    ]
 
     def setup(self, world: PhysicsWorld) -> None:
         W, H = WINDOW_WIDTH, WINDOW_HEIGHT
@@ -28,13 +32,11 @@ class Level02(BaseLevel):
         world.add_static_segment((0, floor_y), (W, floor_y), color=(140, 120, 100), radius=6)
 
         # Ball-Plattform links
-        world.add_static_segment((120, 600), (450, 600), color=(140, 120, 100), radius=6)
-        world.add_ball((280, 550), color=COLOR_CORAL)
+        world.add_static_segment((120, 480), (450, 480), color=(140, 120, 100), radius=6)
+        world.add_ball((280, 430), color=COLOR_CORAL)
 
-        # Hindernis-Wand in der Mitte (nicht bis ganz oben, damit man gut darüber hebeln kann)
-        world.add_static_segment((960, floor_y), (960, 480), color=COLOR_ORANGE, radius=10)
-        # Abgeschrägter Kopf
-        world.add_static_segment((960, 480), (920, 450), color=COLOR_ORANGE, radius=8)
+        # Hindernis-Wand in der Mitte
+        world.add_static_segment((960, floor_y), (960, 540), color=COLOR_ORANGE, radius=10)
 
         # Eimer rechts
         world.add_bucket((1550, floor_y), width=160, height=120, color=COLOR_TEAL)

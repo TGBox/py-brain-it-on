@@ -18,6 +18,10 @@ class Level18(BaseLevel):
     HINT = "Zeichne eine sanfte, flache Rampe, die den Ball geradewegs durch den Tunnel gleiten lässt."
     BG_COLOR = (244, 242, 238)
     STAR_THRESHOLDS = (1, 2)
+    SOLUTION_DESCRIPTION = "Eine sanft abfallende Rutsche führt den Ball präzise durch den engen Tunnel direkt in den Eimer."
+    SOLUTION_STROKES = [
+        [(240, 360), (280, 450), (450, 560), (640, 660), (1000, 715), (1400, 720), (1500, 730), (1630, 780)]
+    ]
 
     def setup(self, world: PhysicsWorld) -> None:
         W, H = WINDOW_WIDTH, WINDOW_HEIGHT
@@ -31,9 +35,10 @@ class Level18(BaseLevel):
         world.add_static_segment((650, 740), (1400, 740), color=(140, 120, 100), radius=8)
         world.add_static_segment((700, 600), (1350, 600), color=COLOR_ORANGE, radius=8)
 
-        # Eimer rechts auf Anschluss-Podest
-        world.add_static_segment((1450, 740), (1850, 740), color=(140, 120, 100), radius=6)
-        world.add_bucket((1650, 740), width=160, height=120, color=COLOR_TEAL)
+        # Eimer rechts auf Anschluss-Podest (abgesenkt, damit Korböffnung auf Tunnelhöhe liegt)
+        world.add_static_segment((1450, 860), (1850, 860), color=(140, 120, 100), radius=6)
+        world.add_bucket((1650, 860), width=160, height=120, color=COLOR_TEAL)
 
         # Tiefer Boden
         world.add_static_segment((0, floor_y), (W, floor_y), color=(140, 120, 100), radius=6)
+
