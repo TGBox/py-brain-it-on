@@ -1,4 +1,4 @@
-# 🧠 Py Brain it on!
+# 🧠 Py Brain it on
 
 Eine Python-Adaption des mobilen Physik-Puzzlespiels **Brain it on!** — entwickelt mit [pygame-ce](https://github.com/pygame-community/pygame-ce) und [pymunk](http://www.pymunk.org/).
 
@@ -30,7 +30,7 @@ Zeichne Formen mit der Maus, nutze die Physik-Simulation und bringe den Ball in 
 ### Steuerung
 
 | Aktion | Eingabe |
-|---|---|
+| --- | --- |
 | Form zeichnen | Linksklick + Ziehen |
 | Strich rückgängig | *Rückgängig*-Button |
 | Verbindung lösen | Klick auf rote Niete |
@@ -81,7 +81,7 @@ uv run python -m py_brain_it_on
 
 ## 🗂️ Projektstruktur
 
-```
+```txt
 py-brain-it-on/
 ├── src/py_brain_it_on/
 │   ├── __init__.py          # Einstiegspunkt (main())
@@ -114,7 +114,7 @@ py-brain-it-on/
 ## 🧩 Level-Übersicht
 
 | # | Titel | Schwierigkeit |
-|---|---|---|
+| --- | --- | --- |
 | 01 | Tutorial: Die Rutsche | ⭐ |
 | 02 | Bogenbrücke | ⭐ |
 | 03 | Der Trichter | ⭐⭐ |
@@ -183,7 +183,7 @@ Erhöhe anschließend `TOTAL_LEVELS` in [`settings.py`](src/py_brain_it_on/setti
 ## 🛠️ Technologien
 
 | Technologie | Zweck |
-|---|---|
+| --- | --- |
 | [pygame-ce](https://github.com/pygame-community/pygame-ce) ≥ 2.5.8 | Rendering, Eingabe, Fenster |
 | [pymunk](http://www.pymunk.org/) ≥ 7.3.0 | 2D-Physik-Engine (Chipmunk-Bindings) |
 | [uv](https://docs.astral.sh/uv/) | Package-Management & Ausführung |
